@@ -1,45 +1,48 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState } from 'react';
+import { StyleSheet, View, Alert } from 'react-native';
+import { CustomButton } from './component/CustomButton';
+import CustomTextInput from './component/CustomTextInput';
+import { handleButtonPress, dummyApiCall } from './servies/apiFunction';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+const App = () => {
+  const [inputValue, setInputValue] = useState('');
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
+  const handleInputChange = (text: string) => {
+    setInputValue(text);
+  };
 
   return (
     <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
+      <View style={styles.inputContainer}>
+        <CustomTextInput
+          value={inputValue}
+          onChange={handleInputChange}
+          placeholder="Enter something..."
+        />
+      </View>
+      <View style={styles.buttonContainer}>
+        <CustomButton
+          children="Press me"
+          onPress={() => handleButtonPress(inputValue)}
+        />
+      </View>
     </View>
   );
-}
+};
+
+export default App;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  buttonContainer: {
+    height: '20%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputContainer: {
+    height: '20%',
+    justifyContent: 'center',
+  },
 });
-
-export default App;
