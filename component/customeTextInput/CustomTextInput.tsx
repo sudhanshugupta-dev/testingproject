@@ -1,5 +1,6 @@
 import React from 'react';
 import { TextInput, StyleSheet, View } from 'react-native';
+import styles from './Styles';
 
 const CustomTextInput = ({
   value,
@@ -21,18 +22,5 @@ const CustomTextInput = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  inputContainer: {
-    marginBottom: 15,
-  },
-  input: {
-    height: 70,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingLeft: 10,
-  },
-});
 
 export default CustomTextInput;

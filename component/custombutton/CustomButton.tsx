@@ -1,5 +1,6 @@
 import { PropsWithChildren } from 'react';
 import { Pressable, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import styles from './Styles';
 
 export const CustomButton = ({
   children,
@@ -12,18 +13,3 @@ export const CustomButton = ({
   );
 };
 
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'Yellow',
-    padding: 10,
-    height: '60%',
-    width: '60%',
-    borderRadius: 15,
-  },
-  text: {
-    color: 'white',
-    textAlign: 'center',
-  },
-});

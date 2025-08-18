@@ -20,10 +20,11 @@ export const dummyApiCall = async (data: string) => {
   }
 };
 
-export const handleButtonPress = (inputValue: any) => {
+export const handleButtonPress = (inputValue: any, navigation: any) => {
   if (inputValue.trim() === '') {
     console.log('Validation Error', 'Please enter a value');
   } else {
+    navigation.navigate('Content')
     dummyApiCall(inputValue);
   }
 };

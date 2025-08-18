@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
-import { CustomButton } from '../../component/CustomButton';
+import { CustomButton } from '../../component/custombutton/CustomButton';
 
 describe('<CustomButton />', () => {
   it('renders correctly', () => {

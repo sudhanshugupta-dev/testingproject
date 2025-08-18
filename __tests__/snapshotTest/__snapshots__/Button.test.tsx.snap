@@ -32,7 +32,7 @@ exports[`CustomButton matches snapshot with default props 1`] = `
   style={
     {
       "alignItems": "center",
-      "backgroundColor": "#007AFF",
+      "backgroundColor": "Yellow",
       "borderRadius": 15,
       "height": "60%",
       "justifyContent": "center",
