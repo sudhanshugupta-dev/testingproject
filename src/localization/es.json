@@ -1,0 +1,19 @@
+{
+  "app": { "title": "Bienvenido" },
+  "auth": {
+    "email": "Correo",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar Contraseña",
+    "login": "Iniciar sesión",
+    "signup": "Registrarse",
+    "google": "Google",
+    "forgot": "¿Olvidaste tu contraseña?",
+    "sendOtp": "Enviar OTP",
+    "verifyOtp": "Verificar OTP",
+    "resetPassword": "Restablecer Contraseña"
+  },
+  "tabs": { "chat": "Chat", "requests": "Solicitudes", "profile": "Perfil" },
+  "profile": { "logout": "Cerrar sesión", "theme": "Tema", "language": "Idioma" },
+  "language": { "select": "Seleccionar idioma", "english": "Inglés", "hindi": "Hindi", "spanish": "Español" },
+  "chat": { "typeMessage": "Escribe un mensaje", "send": "Enviar" }
+}

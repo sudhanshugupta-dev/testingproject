@@ -1,10 +1,72 @@
 ---
-description:
-globs:
-alwaysApply: true
+alwaysApply: false
+
+Rules Section for Cursor
+
+
+To ensure the app is built correctly and aligns with the requirements, strictly adhere to the following rules:
+
+Strict Folder Structure Compliance: Follow the exact folder structure outlined below (src/screens/, src/components/, etc.). Do not deviate by adding unnecessary folders or merging files (e.g., styles must always be in a separate styles.js).
+File Naming and Organization: Use PascalCase for component files (e.g., CustomButton.js), camelCase for functions and variables, and kebab-case for folder names (e.g., forgot-password). Ensure each screen has index.js, View.js, Container.js, styles.js, and each component has index.js, styles.js.
+Firebase Separation: Place all Firebase-related code in src/services/firebase/. Export reusable functions (e.g., signInWithEmail, sendMessage) in separate files like auth.js, chat.js. Do not inline Firebase logic in screens or components.
+Component Reusability: Create reusable components (e.g., CustomButton, CustomTextInput, CustomAvatar) in src/components/. Use these in screens instead of duplicating UI code. Ensure each component is tested (unit + snapshot).
+No Assumptions on Data: Do not hardcode or assume data (e.g., user lists, chat messages) unless explicitly stated. Use mock data only for testing and clearly comment it as such.
+Mandatory Libraries: Install and use specified libraries (e.g., @react-native-firebase/auth, react-navigation, i18next). If additional libraries are needed, explicitly list them in the code comments and provide an npm install command.
+Theming and Localization: Implement theme switching (light/dark) in src/themes/ and localization (English, Hindi, optional Spanish) in src/localization/. All UI strings must be translatable via i18next.
+Navigation Rules: Use react-navigation for stack and tab navigators. Ensure no back navigation to auth screens after login (use AsyncStorage token check). Use icons in tab bar (e.g., MaterialCommunityIcons: message-circle, user-plus, account-circle).
+Testing Requirements: Write unit tests and snapshot tests for every component in __tests__/components/. Write integration tests for every screen in __tests__/screens/. Use Jest and @testing-library/react-native. Mock Firebase calls in tests.
+UI Aesthetics: Ensure screens are visually appealing with:
+
+Gradients (use react-native-linear-gradient).
+Animations (react-native-reanimated for transitions, button presses, or chat bubbles).
+Icons (react-native-vector-icons/MaterialCommunityIcons).
+Rounded avatars with initials (e.g., “SG” for “Sudhanshu Gupta”).
+Consistent fonts (define in src/themes/fonts.js) and colors (in light.js, dark.js).
+
+
+Error Handling: Validate forms (e.g., email format, password match). Show user-friendly toasts (react-native-toast-message) for errors (e.g., Firebase auth failures).
+Code Comments: Add clear comments explaining complex logic, Firebase setup, and any library-specific configurations. Include instructions for running the app (e.g., npx react-native run-android).
+No Partial Code: Generate complete, runnable files for each screen, component, and service. Avoid pseudocode or placeholders like “// add logic here.”
+Testing Setup: Provide a package.json with devDependencies for testing (Jest, @testing-library/react-native) and a basic Jest config in jest.config.js.
+Cross-Platform Compatibility: Ensure code works on both iOS and Android. Use react-native-safe-area-context for safe area handling.
+No External Dependencies Beyond Scope: Do not integrate unrequested features (e.g., push notifications, analytics) unless explicitly needed for the described functionality.
+
+
+Folder Structure
+
+src/:
+
+screens/:
+
+Splash/: index.js, View.js, Container.js, styles.js
+Login/: Same structure
+Signup/, ForgotPassword/, VerifyOTP/, ResetPassword/, Chat/, ChatRoom/, Requests/, Profile/, Language/
+
+
+components/:
+
+CustomButton/: index.js, styles.js
+CustomTextInput/, CustomAvatar/, ChatBubble/, etc.
+
+
+navigation/: index.js (stack + tab navigators)
+services/:
+
+firebase/: index.js (config), auth.js, chat.js, requests.js
+
+
+themes/: light.js, dark.js, fonts.js
+localization/: en.json, hi.json, es.json (optional), index.js (i18next setup)
+redux/: store.js, slices/ (authSlice.js, themeSlice.js, languageSlice.js, chatSlice.js)
+assets/: Images, icons, fonts
+
+
+__tests__/:
+
+components/: e.g., CustomButton/test.js (unit + snapshot)
+screens/: e.g., Login/test.js (integration)
+
+
+Root: App.js, firebaseConfig.js, package.json, jest.config.js
 ---
 
-# Your rule content
-
-- You can @ files here
-- You can use markdown but dont have to
