@@ -1,0 +1,87 @@
+{
+    "users": {
+      "user1": {
+        "name": "Alice Smith",
+        "email": "alice@example.com",
+        "avatar": "https://example.com/avatars/alice.jpg"
+      },
+      "user2": {
+        "name": "Bob Johnson",
+        "email": "bob@example.com",
+        "avatar": "https://example.com/avatars/bob.jpg"
+      },
+      "user3": {
+        "name": "Charlie Brown",
+        "email": "charlie@example.com",
+        "avatar": "https://example.com/avatars/charlie.jpg"
+      }
+    },
+    "chats": {
+      "chat1": {
+        "name": "Alice & Bob",
+        "lastMessage": "Hey, how's it going?",
+        "avatar": "https://example.com/avatars/group1.jpg"
+      },
+      "chat2": {
+        "name": "Bob & Charlie",
+        "lastMessage": "See you tomorrow!",
+        "avatar": "https://example.com/avatars/group2.jpg"
+      }
+    },
+    "rooms": {
+      "chat1": {
+        "messages": {
+          "message1": {
+            "text": "Hi Bob!",
+            "senderId": "user1",
+            "createdAt": 1698765432000
+          },
+          "message2": {
+            "text": "Hey, how's it going?",
+            "senderId": "user2",
+            "createdAt": 1698765433000
+          }
+        }
+      },
+      "chat2": {
+        "messages": {
+          "message1": {
+            "text": "Charlie, you free?",
+            "senderId": "user2",
+            "createdAt": 1698765434000
+          },
+          "message2": {
+            "text": "See you tomorrow!",
+            "senderId": "user3",
+            "createdAt": 1698765435000
+          }
+        }
+      }
+    },
+    "requests": {
+      "user1": {
+        "user3": {
+          "from": "user3",
+          "status": "pending"
+        }
+      },
+      "user2": {
+        "user1": {
+          "from": "user1",
+          "status": "pending"
+        }
+      }
+    },
+    "friends": {
+      "user1": {
+        "user2": true
+      },
+      "user2": {
+        "user1": true,
+        "user3": true
+      },
+      "user3": {
+        "user2": true
+      }
+    }
+  }

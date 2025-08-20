@@ -1,0 +1,19 @@
+{
+  "app": { "title": "स्वागत है" },
+  "auth": {
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें",
+    "login": "लॉग इन",
+    "signup": "साइन अप",
+    "google": "गूगल",
+    "forgot": "पासवर्ड भूल गए?",
+    "sendOtp": "ओटीपी भेजें",
+    "verifyOtp": "ओटीपी सत्यापित करें",
+    "resetPassword": "पासवर्ड रीसेट करें"
+  },
+  "tabs": { "chat": "चैट", "requests": "अनुरोध", "profile": "प्रोफ़ाइल" },
+  "profile": { "logout": "लॉगआउट", "theme": "थीम", "language": "भाषा" },
+  "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश" },
+  "chat": { "typeMessage": "संदेश लिखें", "send": "भेजें" }
+}
