@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { signInWithEmail, signUpWithEmail, signOutFirebase } from '../../services/firebase/auth';
+import {
+  signInWithEmail,
+  signUpWithEmail,
+  signOutFirebase,
+} from '../../services/firebase/auth';
 
 type AuthState = {
   user: { uid: string; email?: string | null } | null;
@@ -9,36 +13,54 @@ type AuthState = {
   error?: string | null;
 };
 
-const initialState: AuthState = { user: null, token: null, loading: false, error: null };
+const initialState: AuthState = {
+  user: null,
+  token: null,
+  loading: false,
+  error: null,
+};
 
 export const loginWithEmail = createAsyncThunk(
   'auth/loginWithEmail',
-  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+  async (
+    { email, password }: { email: string; password: string },
+    { rejectWithValue },
+  ) => {
     try {
       const cred = await signInWithEmail(email, password);
       const token = await cred.user.getIdToken();
       await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify({ uid: cred.user.uid, email: cred.user.email }));
+      await AsyncStorage.setItem(
+        'user',
+        JSON.stringify({ uid: cred.user.uid, email: cred.user.email }),
+      );
       return { token, user: { uid: cred.user.uid, email: cred.user.email } };
     } catch (e: any) {
       return rejectWithValue(e?.message || 'Login failed');
     }
-  }
+  },
 );
 
 export const signupWithEmail = createAsyncThunk(
   'auth/signupWithEmail',
-  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+  async (
+    { email, password }: { email: string; password: string },
+    { rejectWithValue },
+  ) => {
+    console.log(email, password, 'dcds');
     try {
       const cred = await signUpWithEmail(email, password);
       const token = await cred.user.getIdToken();
       await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify({ uid: cred.user.uid, email: cred.user.email }));
+      await AsyncStorage.setItem(
+        'user',
+        JSON.stringify({ uid: cred.user.uid, email: cred.user.email }),
+      );
       return { token, user: { uid: cred.user.uid, email: cred.user.email } };
     } catch (e: any) {
       return rejectWithValue(e?.message || 'Signup failed');
     }
-  }
+  },
 );
 
 export const logout = createAsyncThunk('auth/logout', async () => {
@@ -51,14 +73,17 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    restoreAuth: (state, action: PayloadAction<{ token: string | null; user: AuthState['user'] }>) => {
+    restoreAuth: (
+      state,
+      action: PayloadAction<{ token: string | null; user: AuthState['user'] }>,
+    ) => {
       state.token = action.payload.token;
       state.user = action.payload.user;
     },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
-      .addCase(loginWithEmail.pending, (state) => {
+      .addCase(loginWithEmail.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -71,7 +96,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      .addCase(signupWithEmail.pending, (state) => {
+      .addCase(signupWithEmail.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -84,7 +109,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      .addCase(logout.fulfilled, (state) => {
+      .addCase(logout.fulfilled, state => {
         state.user = null;
         state.token = null;
       });
