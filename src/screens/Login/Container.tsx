@@ -17,8 +17,8 @@ const LoginContainer = () => {
   const loading = useSelector((s: RootState) => s.auth.loading);
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [email, setEmail] = useState('s@gamil.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const onLogin = async () => {
     if (!email || !password) {
