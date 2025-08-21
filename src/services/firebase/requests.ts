@@ -72,7 +72,7 @@ export const sendFriendRequest = async (toUserId: string): Promise<void> => {
     // Commit the batch
     await batch.commit();
     console.log(`Friend request sent from ${fromUserId} to ${toUserId}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending friend request:', error);
     throw new Error(`Failed to send friend request: ${error.message}`);
   }
@@ -80,7 +80,7 @@ export const sendFriendRequest = async (toUserId: string): Promise<void> => {
 /** --------------------------
  *  ACCEPT FRIEND REQUEST
  * --------------------------- */
-export const acceptFriendRequest = async fromUserId => {
+export const acceptFriendRequest = async (fromUserId: string) => {
   const currentUserId = getCurrentUserId();
 
   try {
@@ -97,7 +97,7 @@ export const acceptFriendRequest = async fromUserId => {
     batch.update(currentUserRef, { [`received.${fromUserId}`]: 'accepted' });
     batch.update(fromUserRef, { [`sent.${currentUserId}`]: 'accepted' });
 
-    // Add to friends
+    // Add to friends (as both map and array for compatibility)
     const currentFriendsRef = firestore()
       .collection('friends')
       .doc(currentUserId);
@@ -105,6 +105,9 @@ export const acceptFriendRequest = async fromUserId => {
 
     batch.set(currentFriendsRef, { [fromUserId]: true }, { merge: true });
     batch.set(fromFriendsRef, { [currentUserId]: true }, { merge: true });
+
+    batch.set(currentFriendsRef, { friendIds: firestore.FieldValue.arrayUnion(fromUserId) }, { merge: true });
+    batch.set(fromFriendsRef, { friendIds: firestore.FieldValue.arrayUnion(currentUserId) }, { merge: true });
 
     // Commit the batch
     await batch.commit();
@@ -116,7 +119,7 @@ export const acceptFriendRequest = async fromUserId => {
       throw new Error('User profile not found');
     }
 
-    const userData = userDoc.data();
+    const userData = userDoc.data() as any;
     return {
       id: userDoc.id,
       name: userData.name || 'Unknown',
@@ -124,7 +127,7 @@ export const acceptFriendRequest = async fromUserId => {
       avatar: userData.avatar || null,
       // Add other relevant fields as needed
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error accepting friend request:', error);
     throw error;
   }
@@ -167,7 +170,7 @@ export const getFriendRequests = async () => {
     // Get pending request user IDs
     const pendingRequestIds = doc.exists
       ? Object.keys(doc.data()?.received || {}).filter(
-          uid => doc.data()?.received[uid] === 'pending',
+          uid => (doc.data() as any)?.received[uid] === 'pending',
         )
       : [];
 
@@ -179,7 +182,7 @@ export const getFriendRequests = async () => {
         return null; // Handle case where user document doesn't exist
       }
 
-      const userData = userDoc.data();
+      const userData = userDoc.data() as any;
       return {
         id: userDoc.id,
         name: userData.name || 'Unknown',
@@ -207,7 +210,8 @@ export const getFriendRequests = async () => {
 export const getFriends = async (): Promise<string[]> => {
   const userId = getCurrentUserId();
   const doc = await firestore().collection('friends').doc(userId).get();
-  return Object.keys(doc.data() || {});
+  const data = doc.data() || {};
+  return Array.isArray((data as any).friendIds) ? (data as any).friendIds : Object.keys(data);
 };
 
 export const getSuggestedUsers = async () => {
@@ -219,9 +223,10 @@ export const getSuggestedUsers = async () => {
       .collection('friends')
       .doc(userId)
       .get();
-    const friends = friendsDoc.exists
-      ? Object.keys(friendsDoc.data() || {})
-      : [];
+    const friendsData = friendsDoc.exists ? friendsDoc.data() || {} : {};
+    const friends = Array.isArray((friendsData as any).friendIds)
+      ? ((friendsData as any).friendIds as string[])
+      : Object.keys(friendsData);
 
     // 2️⃣ Get sent & received requests
     const requestDoc = await firestore()
@@ -229,10 +234,10 @@ export const getSuggestedUsers = async () => {
       .doc(userId)
       .get();
     const sent = requestDoc.exists
-      ? Object.keys(requestDoc.data()?.sent || {})
+      ? Object.keys((requestDoc.data() as any)?.sent || {})
       : [];
     const received = requestDoc.exists
-      ? Object.keys(requestDoc.data()?.received || {})
+      ? Object.keys((requestDoc.data() as any)?.received || {})
       : [];
 
     // 3️⃣ Combine IDs to exclude
@@ -241,16 +246,17 @@ export const getSuggestedUsers = async () => {
     // 4️⃣ Fetch users and filter out excluded IDs
     const usersSnapshot = await firestore()
       .collection('users')
-      .where('__name__', 'not-in', Array.from(exclude))
       .get();
 
-    // 5️⃣ Map results to return user data
-    return usersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name || 'Unknown',
-      email: doc.data().email || 'No email',
-      avatar: doc.data().avatar || null,
-    }));
+    // 5️⃣ Map results to return user data excluding those in exclude
+    return usersSnapshot.docs
+      .filter(doc => !exclude.has(doc.id))
+      .map(doc => ({
+        id: doc.id,
+        name: (doc.data() as any).name || 'Unknown',
+        email: (doc.data() as any).email || 'No email',
+        avatar: (doc.data() as any).avatar || null,
+      }));
   } catch (error) {
     console.error('Error fetching suggested users:', error);
     return [];

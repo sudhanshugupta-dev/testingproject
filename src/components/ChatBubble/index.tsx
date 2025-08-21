@@ -1,19 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useAppTheme } from '../../themes/useTheme';
 
 const ChatBubble = ({ text, isMine }: { text: string; isMine?: boolean }) => {
+  const { colors } = useAppTheme();
+  const mineStyle = { alignSelf: 'flex-end' as const, backgroundColor: colors.primary };
+  const theirsStyle = { alignSelf: 'flex-start' as const, backgroundColor: colors.card };
   return (
-    <View style={[styles.container, isMine ? styles.mine : styles.theirs]}>
-      <Text style={[styles.text, isMine && { color: '#fff' }]}>{text}</Text>
+    <View style={[styles.container, isMine ? mineStyle : theirsStyle]}>      
+      <Text style={[styles.text, { color: isMine ? '#fff' : colors.text }]}>{text}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { padding: 10, marginVertical: 6, borderRadius: 12, maxWidth: '80%' },
-  mine: { alignSelf: 'flex-end', backgroundColor: '#4F46E5' },
-  theirs: { alignSelf: 'flex-start', backgroundColor: '#E5E7EB' },
-  text: { color: '#111827' },
+  text: { },
 });
 
 export default ChatBubble;

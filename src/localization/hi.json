@@ -14,6 +14,6 @@
   },
   "tabs": { "chat": "चैट", "requests": "अनुरोध", "profile": "प्रोफ़ाइल" },
   "profile": { "logout": "लॉगआउट", "theme": "थीम", "language": "भाषा" },
-  "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश" },
+  "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश", "french": "फ़्रेंच", "japanese": "जापानी" },
   "chat": { "typeMessage": "संदेश लिखें", "send": "भेजें" }
 }

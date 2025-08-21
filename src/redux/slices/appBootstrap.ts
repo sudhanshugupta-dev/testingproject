@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restoreTheme } from './themeSlice';
 import { restoreLanguage } from './languageSlice';
 import { restoreAuth } from './authSlice';
+import { Appearance } from 'react-native';
 
 type AppState = { bootstrapped: boolean };
 const initialState: AppState = { bootstrapped: false };
@@ -15,8 +16,14 @@ export const bootstrapApp = createAsyncThunk('app/bootstrap', async (_, { dispat
     AsyncStorage.getItem('user'),
   ]);
 
-  if (theme === 'light' || theme === 'dark') dispatch(restoreTheme(theme));
-  if (lang === 'en' || lang === 'hi' || lang === 'es') dispatch(restoreLanguage(lang));
+  if (theme === 'light' || theme === 'dark') {
+    dispatch(restoreTheme(theme));
+  } else {
+    const system = Appearance.getColorScheme();
+    dispatch(restoreTheme(system === 'dark' ? 'dark' : 'light'));
+  }
+
+  if (lang === 'en' || lang === 'hi' || lang === 'es' || lang === 'fr' || lang === 'ja') dispatch(restoreLanguage(lang as any));
   dispatch(restoreAuth({ token, user: user ? JSON.parse(user) : null }));
   return true;
 });

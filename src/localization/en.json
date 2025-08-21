@@ -8,12 +8,14 @@
     "signup": "Sign Up",
     "google": "Google",
     "forgot": "Forgot Password?",
-    "sendOtp": "Send OTP",
-    "verifyOtp": "Verify OTP",
-    "resetPassword": "Reset Password"
+    "sendOtp": "Verify Email",
+    "verifyOtp": "Check your mail for reset password",
+    "resetPassword": "Reset Password",
+    "loginGoogle" : "Login With Google",
+    "signupGoogle" : "Sign Up With Google"
   },
   "tabs": { "chat": "Chat", "requests": "Requests", "profile": "Profile" },
   "profile": { "logout": "Logout", "theme": "Theme", "language": "Language" },
-  "language": { "select": "Select Language", "english": "English", "hindi": "Hindi", "spanish": "Spanish" },
-  "chat": { "typeMessage": "Type a message", "send": "Send" }
+  "language": { "select": "Select Language", "english": "English", "hindi": "Hindi", "spanish": "Spanish", "french": "French", "japanese": "Japanese" },
+  "chat": { "typeMessage": "Type a message", "send": "Send" , "online": "online", "Offline": "Offline"}
 }

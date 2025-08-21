@@ -6,11 +6,13 @@ import CustomButton from '../../components/CustomButton';
 import { sendPasswordResetOTP } from '../../services/firebase/auth';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../../themes/useTheme';
 
 const ForgotPasswordContainer = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const nav = useNavigation();
+  const { colors } = useAppTheme();
 
   const onSend = async () => {
     try {
@@ -24,13 +26,13 @@ const ForgotPasswordContainer = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>      
       <CustomTextInput label={t('auth.email')} value={email} onChangeText={setEmail} placeholder="you@example.com" />
       <CustomButton title={t('auth.sendOtp')} onPress={onSend} />
     </View>
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16, backgroundColor: '#fff', justifyContent: 'center' } });
+const styles = StyleSheet.create({ container: { flex: 1, padding: 16, justifyContent: 'center' } });
 
 export default ForgotPasswordContainer;

@@ -5,6 +5,8 @@ import CustomButton from '../../components/CustomButton';
 import { resetPassword } from '../../services/firebase/auth';
 import Toast from 'react-native-toast-message';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../../themes/useTheme';
+import { useTranslation } from 'react-i18next';
 
 const ResetPasswordContainer = () => {
   const [password, setPassword] = useState('');
@@ -12,6 +14,8 @@ const ResetPasswordContainer = () => {
   const route = useRoute<any>();
   const nav = useNavigation();
   const email = route.params?.email;
+  const { colors } = useAppTheme();
+  const { t } = useTranslation();
 
   const onReset = async () => {
     if (!password || password !== confirm) {
@@ -19,7 +23,7 @@ const ResetPasswordContainer = () => {
       return;
     }
     try {
-      await resetPassword(email, password);
+      await resetPassword(password);
       Toast.show({ type: 'success', text1: 'Password reset' });
       // @ts-ignore
       nav.reset({ index: 0, routes: [{ name: 'Login' }] });
@@ -29,14 +33,14 @@ const ResetPasswordContainer = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <CustomTextInput value={password} onChangeText={setPassword} placeholder="New Password" secureTextEntry />
-      <CustomTextInput value={confirm} onChangeText={setConfirm} placeholder="Confirm Password" secureTextEntry />
-      <CustomButton title="Reset" onPress={onReset} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>      
+      <CustomTextInput value={password} onChangeText={setPassword} placeholder={t('auth.password')} secureTextEntry />
+      <CustomTextInput value={confirm} onChangeText={setConfirm} placeholder={t('auth.confirmPassword')} secureTextEntry />
+      <CustomButton title={t('auth.resetPassword')} onPress={onReset} />
     </View>
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16, backgroundColor: '#fff', justifyContent: 'center' } });
+const styles = StyleSheet.create({ container: { flex: 1, padding: 16, justifyContent: 'center' } });
 
 export default ResetPasswordContainer;
