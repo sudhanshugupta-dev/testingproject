@@ -12,10 +12,58 @@
     "verifyOtp": "Check your mail for reset password",
     "resetPassword": "Reset Password",
     "loginGoogle" : "Login With Google",
-    "signupGoogle" : "Sign Up With Google"
+    "signupGoogle" : "Sign Up With Google",
+    "placeholders": {
+      "email": "you@example.com",
+      "password": "••••••••",
+      "confirmPassword": "Confirm your password"
+    },
+    "error": {
+      "fillAllFields": "Please fill all fields",
+      "loginFailed": "Login failed",
+      "signupFailed": "Sign up failed",
+      "googleLoginFailed": "Google sign-in failed",
+      "passwordMismatch": "Passwords do not match",
+      "invalidEmail": "Please enter a valid email",
+      "weakPassword": "Password should be at least 6 characters"
+    }
   },
   "tabs": { "chat": "Chat", "requests": "Requests", "profile": "Profile" },
-  "profile": { "logout": "Logout", "theme": "Theme", "language": "Language" },
+  "profile": { "logout": "Logout", "theme": "Theme", "language": "Language", "guest": "Guest User" },
   "language": { "select": "Select Language", "english": "English", "hindi": "Hindi", "spanish": "Spanish", "french": "French", "japanese": "Japanese" },
-  "chat": { "typeMessage": "Type a message", "send": "Send" , "online": "online", "Offline": "Offline"}
+  "chat": { 
+    "typeMessage": "Type a message", 
+    "send": "Send", 
+    "online": "online", 
+    "offline": "Offline",
+    "searchChats": "Search chats...",
+    "noChats": "No chats yet, start a conversation!",
+    "noMessages": "No messages yet",
+    "friend": "Friend",
+    "error": {
+      "invalidUserOrFriend": "Invalid user or friend ID",
+      "failedToLoadChat": "Failed to load chat. Please try again.",
+      "failedToSendMessage": "Failed to send message. Please try again."
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit"
+  },
+  "requests": {
+    "friendRequests": "Friend Requests",
+    "suggested": "Suggested",
+    "suggestedUsers": "Suggested Users",
+    "accept": "Accept",
+    "decline": "Decline",
+    "sendRequest": "Send Request",
+    "noRequests": "No friend requests",
+    "noSuggestedUsers": "No suggested users"
+  }
 }

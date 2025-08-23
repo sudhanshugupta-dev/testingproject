@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../redux/store';
-import { getChatList } from '../../redux/slices/chatsSlice';
+import { getChatList, markChatAsRead } from '../../redux/slices/chatsSlice';
 import CustomAvatar from '../../components/CustomAvatar';
 import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
@@ -42,32 +42,53 @@ const ChatContainer = () => {
     ({ item }: { item: any }) => (
       <Pressable
         style={[styles.row, { borderBottomColor: colors.text + '22', backgroundColor: colors.background }]}
-        android_ripple={{ color: '#E5E7EB' }}
-        onPress={() =>
+        android_ripple={{ color: colors.primary + '20' }}
+        onPress={() => {
+          // Mark as read when opening chat
+          if (item.unreadCount > 0) {
+            dispatch(markChatAsRead(item.id));
+          }
           nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name })
-        }
+        }}
       >
         <CustomAvatar name={item.name} />
         <View style={{ marginLeft: 12, flex: 1 }}>
-          <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-          <Text numberOfLines={1} style={[styles.last, { color: colors.text, opacity: 0.6 }]}>
-            {item.lastMessage}
+          <Text style={[
+            styles.name, 
+            { color: colors.text },
+            item.unreadCount > 0 && { fontWeight: 'bold' }
+          ]}>
+            {item.name}
+          </Text>
+          <Text numberOfLines={1} style={[
+            styles.last, 
+            { color: colors.text, opacity: 0.6 },
+            item.unreadCount > 0 && { fontWeight: '600', opacity: 0.8 }
+          ]}>
+            {item.lastMessage || t('chat.noMessages')}
           </Text>
         </View>
+        {item.unreadCount > 0 && (
+          <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.unreadText}>
+              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+            </Text>
+          </View>
+        )}
       </Pressable>
     ),
-    [nav, colors],
+    [nav, colors, dispatch, t],
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>      
       <View style={[styles.searchBar, { backgroundColor: colors.background, borderBottomColor: colors.text + '22' }]}>
         <TextInput
-          placeholder={t('chat.typeMessage')}
+          placeholder={t('chat.searchChats')}
           value={search}
           onChangeText={setSearch}
           style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text }]}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.text + '60'}
         />
       </View>
 
@@ -83,7 +104,7 @@ const ChatContainer = () => {
             style={{ width: 200, height: 200 }}
           />
           <Text style={[styles.emptyText, { color: colors.text, opacity: 0.7 }]}>
-            No chats yet, start a conversation!
+            {t('chat.noChats')}
           </Text>
         </View>
       ) : (
@@ -133,6 +154,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  unreadText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

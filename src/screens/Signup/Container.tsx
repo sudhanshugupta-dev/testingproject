@@ -27,13 +27,17 @@ const SignupContainer = () => {
   const [confirm, setConfirm] = useState('');
 
   const onSignup = async () => {
-    if (!email || !password || password !== confirm) {
-      Toast.show({ type: 'error', text1: 'Check form inputs' });
+    if (!email || !password) {
+      Toast.show({ type: 'error', text1: t('auth.error.fillAllFields') });
+      return;
+    }
+    if (password !== confirm) {
+      Toast.show({ type: 'error', text1: t('auth.error.passwordMismatch') });
       return;
     }
     const res = await dispatch(signupWithEmail({ email, password }));
     if ((res as any).error) {
-      Toast.show({ type: 'error', text1: 'Signup failed' });
+      Toast.show({ type: 'error', text1: t('auth.error.signupFailed') });
     } else {
       // @ts-ignore
       nav.reset({ index: 0, routes: [{ name: 'Main' }] });
@@ -66,25 +70,26 @@ const SignupContainer = () => {
         label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
-        placeholder="you@example.com"
+        placeholder={t('auth.placeholders.email')}
       />
       <CustomTextInput
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder="••••••••"
+        placeholder={t('auth.placeholders.password')}
         secureTextEntry
       />
       <CustomTextInput
         label={t('auth.confirmPassword')}
         value={confirm}
         onChangeText={setConfirm}
-        placeholder="••••••••"
+        placeholder={t('auth.placeholders.confirmPassword')}
         secureTextEntry
       />
       <CustomButton
-        title={loading ? '...' : t('auth.signup')}
+        title={t('auth.signup')}
         onPress={onSignup}
+        loading={loading}
       />
 
       <Pressable onPress={() => nav.navigate('Login')}>

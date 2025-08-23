@@ -82,13 +82,13 @@ const RequestedContainer = () => {
             style={styles.acceptBtn}
             onPress={() => handleAccept(item.id)}
           >
-            <Text style={styles.btnText}>{t('common.accept', { defaultValue: 'Accept' })}</Text>
+            <Text style={styles.btnText}>{t('requests.accept')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.declineBtn}
             onPress={() => handleDecline(item.id)}
           >
-            <Text style={styles.btnText}>{t('common.decline', { defaultValue: 'Decline' })}</Text>
+            <Text style={styles.btnText}>{t('requests.decline')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -103,30 +103,30 @@ const RequestedContainer = () => {
         style={styles.requestBtn}
         onPress={() => handleSendRequest(item.id)}
       >
-        <Text style={styles.btnText}>{t('common.sendRequest', { defaultValue: 'Send Request' })}</Text>
+        <Text style={styles.btnText}>{t('requests.sendRequest')}</Text>
       </TouchableOpacity>
     </View>
   );
 
-  if (loading) return <Text style={styles.loading}>Loading...</Text>;
+  if (loading) return <Text style={styles.loading}>{t('common.loading')}</Text>;
 
   return (
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TabButton
-          title={t('tabs.requests')}
+          title={t('requests.friendRequests')}
           isActive={activeTab === 'requests'}
           onPress={() => setActiveTab('requests')}
         />
         <TabButton
-          title={t('requests.suggested', { defaultValue: 'Suggested' })}
+          title={t('requests.suggested')}
           isActive={activeTab === 'suggested'}
           onPress={() => setActiveTab('suggested')}
         />
       </View>
       {activeTab === 'requests' ? (
         <View style={styles.content}>
-          <Text style={styles.heading}>{t('requests.title', { defaultValue: 'Friend Requests' })}</Text>
+          <Text style={styles.heading}>{t('requests.friendRequests')}</Text>
           {requests.length > 0 ? (
             <FlatList
               data={requests}
@@ -135,12 +135,12 @@ const RequestedContainer = () => {
               showsVerticalScrollIndicator={false}
             />
           ) : (
-            <Text style={styles.noData}>{t('requests.none', { defaultValue: 'No friend requests' })}</Text>
+            <Text style={styles.noData}>{t('requests.noRequests')}</Text>
           )}
         </View>
       ) : (
         <View style={styles.content}>
-          <Text style={styles.heading}>{t('requests.suggested', { defaultValue: 'Suggested Users' })}</Text>
+          <Text style={styles.heading}>{t('requests.suggestedUsers')}</Text>
           {suggestedUsers.length > 0 ? (
             <FlatList
               data={suggestedUsers}
@@ -149,7 +149,7 @@ const RequestedContainer = () => {
               showsVerticalScrollIndicator={false}
             />
           ) : (
-            <Text style={styles.noData}>{t('requests.noneSuggested', { defaultValue: 'No suggested users' })}</Text>
+            <Text style={styles.noData}>{t('requests.noSuggestedUsers')}</Text>
           )}
         </View>
       )}
