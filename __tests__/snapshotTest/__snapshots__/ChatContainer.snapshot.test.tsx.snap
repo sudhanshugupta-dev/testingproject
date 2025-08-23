@@ -22,15 +22,15 @@ exports[`Chat screen renders 1`] = `
         },
         {
           "backgroundColor": "#FFFFFF",
-          "borderBottomColor": "#11111122",
+          "borderBottomColor": "#1F293722",
         },
       ]
     }
   >
     <TextInput
       onChangeText={[Function]}
-      placeholder="chat.typeMessage"
-      placeholderTextColor="#9CA3AF"
+      placeholder="chat.searchChats"
+      placeholderTextColor="#1F293760"
       style={
         [
           {
@@ -40,8 +40,8 @@ exports[`Chat screen renders 1`] = `
             "paddingHorizontal": 12,
           },
           {
-            "backgroundColor": "#F3F4F6",
-            "color": "#111111",
+            "backgroundColor": "#F9FAFB",
+            "color": "#1F2937",
           },
         ]
       }
@@ -49,7 +49,7 @@ exports[`Chat screen renders 1`] = `
     />
   </View>
   <ActivityIndicator
-    color="#4F46E5"
+    color="#6366F1"
     size="large"
     style={
       {

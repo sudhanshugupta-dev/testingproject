@@ -2,88 +2,118 @@
 
 exports[`CustomButton matches snapshot 1`] = `
 <View
-  accessibilityState={
-    {
-      "busy": undefined,
-      "checked": undefined,
-      "disabled": undefined,
-      "expanded": undefined,
-      "selected": undefined,
-    }
-  }
-  accessibilityValue={
-    {
-      "max": undefined,
-      "min": undefined,
-      "now": undefined,
-      "text": undefined,
-    }
-  }
-  accessible={true}
-  collapsable={false}
-  focusable={true}
-  onBlur={[Function]}
-  onClick={[Function]}
-  onFocus={[Function]}
-  onResponderGrant={[Function]}
-  onResponderMove={[Function]}
-  onResponderRelease={[Function]}
-  onResponderTerminate={[Function]}
-  onResponderTerminationRequest={[Function]}
-  onStartShouldSetResponder={[Function]}
   style={
     [
       {
-        "opacity": 1,
+        "borderRadius": 16,
+        "elevation": 6,
+        "shadowColor": "#000",
+        "shadowOffset": {
+          "height": 3,
+          "width": 0,
+        },
+        "shadowOpacity": 0.25,
       },
       undefined,
     ]
   }
-  testID="custom-button"
 >
-  <BVLinearGradient
-    colors={
+  <View
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": undefined,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
       [
-        4284704497,
-        4280468830,
+        {
+          "opacity": 1,
+          "transform": [
+            {
+              "scale": 1,
+            },
+          ],
+        },
       ]
     }
-    endPoint={
-      {
-        "x": 1,
-        "y": 0,
-      }
-    }
-    locations={null}
-    startPoint={
-      {
-        "x": 0,
-        "y": 0,
-      }
-    }
-    style={
-      {
-        "alignItems": "center",
-        "borderRadius": 12,
-        "paddingVertical": 12,
-      }
-    }
+    testID="custom-button"
   >
-    <Text
+    <BVLinearGradient
+      colors={
+        [
+          4284704497,
+          4289049852,
+        ]
+      }
+      endPoint={
+        {
+          "x": 1,
+          "y": 0,
+        }
+      }
+      locations={null}
+      startPoint={
+        {
+          "x": 0,
+          "y": 0,
+        }
+      }
       style={
         [
           {
-            "color": "#fff",
+            "alignItems": "center",
+            "borderRadius": 16,
+            "justifyContent": "center",
+            "minHeight": 52,
+            "paddingHorizontal": 32,
+            "paddingVertical": 16,
           },
-          {
-            "fontSize": 20,
-            "fontWeight": "700",
-          },
+          undefined,
         ]
       }
     >
-      Snapshot
-    </Text>
-  </BVLinearGradient>
+      <Text
+        style={
+          [
+            {
+              "color": "#ffffff",
+              "letterSpacing": 0.5,
+            },
+            {
+              "fontSize": 20,
+              "fontWeight": "700",
+              "opacity": 1,
+            },
+          ]
+        }
+      >
+        Snapshot
+      </Text>
+    </BVLinearGradient>
+  </View>
 </View>
 `;

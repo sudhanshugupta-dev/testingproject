@@ -203,7 +203,7 @@ const ChatRoomContainer = () => {
     }
 
     if (!myId || !friendId) {
-      setError('Invalid user or friend ID');
+      setError(t('chat.error.invalidUserOrFriend'));
       return;
     }
 
@@ -215,7 +215,7 @@ const ChatRoomContainer = () => {
         setError(null);
       } catch (error: any) {
         console.error('Error fetching/creating chat room:', error);
-        setError('Failed to load chat. Please try again.');
+        setError(t('chat.error.failedToLoadChat'));
       }
     };
 
@@ -259,7 +259,7 @@ const ChatRoomContainer = () => {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (error: any) {
       console.error('Error sending message:', error);
-      setError('Failed to send message. Please try again.');
+      setError(t('chat.error.failedToSendMessage'));
     }
   };
   
@@ -279,7 +279,7 @@ const ChatRoomContainer = () => {
           </View>
         </View>
         <View style={styles.headerCenter}>
-          <Text style={[styles.friendName, { color: colors.text }]}>{friendName || 'Friend'}</Text>
+          <Text style={[styles.friendName, { color: colors.text }]}>{friendName || t('chat.friend')}</Text>
           <Text style={[styles.statusText, { color: isFriendOnline ? '#4CAF50' : '#EF4444' }]}>
             {isFriendOnline ? t('chat.online') : t('chat.offline')}
           </Text>
