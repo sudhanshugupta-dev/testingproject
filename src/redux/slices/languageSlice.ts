@@ -2,7 +2,9 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../../localization/i18n';
 
-type LangState = { code: 'en' | 'hi' | 'es' };
+type LangCode = 'en' | 'hi' | 'es' | 'fr' | 'ja';
+
+type LangState = { code: LangCode };
 const initialState: LangState = { code: 'en' };
 
 const languageSlice = createSlice({

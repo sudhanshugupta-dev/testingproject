@@ -1,378 +1,160 @@
-// import React from 'react';
-// import { View, Text, StyleSheet } from 'react-native';
-
-// const RequestsContainer = () => {
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Requests</Text>
-//       <Text>Incoming and Connected users will appear here.</Text>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({ container: { flex: 1, padding: 16, backgroundColor: '#fff' }, title: { fontWeight: '700', fontSize: 18, marginBottom: 8 } });
-
-// export default RequestsContainer;
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  TextInput,
+  StyleSheet,
 } from 'react-native';
-import { getRequests, acceptRequest, declineRequest } from './requestService';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import {
+  getFriendRequests,
+  getSuggestedUsers,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+} from '../../services/firebase/requests';
+import {styles} from './styles';
+import { useTranslation } from 'react-i18next';
 
-type RequestItem = { fromUserId: string; fromName: string; status: string };
-type FriendItem = { friendId: string; friendName: string };
+// Custom Tab Component
+const TabButton = ({ title, isActive, onPress }) => (
+  <TouchableOpacity
+    style={[styles.tab, isActive ? styles.activeTab : styles.inactiveTab]}
+    onPress={onPress}
+  >
+    <Text
+      style={[
+        styles.tabText,
+        isActive ? styles.activeTabText : styles.inactiveTabText,
+      ]}
+    >
+      {title}
+    </Text>
+  </TouchableOpacity>
+);
 
-const RequestsContainer = () => {
-  const [requests, setRequests] = useState<RequestItem[]>([]);
-  const [friends, setFriends] = useState<FriendItem[]>([]);
+const RequestedContainer = () => {
+  const [requests, setRequests] = useState([]);
+  const [suggestedUsers, setSuggestedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const userId = auth().currentUser?.uid;
+  const [activeTab, setActiveTab] = useState('requests');
+  const { t } = useTranslation();
 
   useEffect(() => {
-    if (!userId) {
-      setError('User not authenticated');
-      setLoading(false);
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Fetch requests
-        const requestsData = await getRequests(userId);
-        const requestList = await Promise.all(
-          Object.keys(requestsData).map(async fromUserId => {
-            const userDoc = await firestore()
-              .collection('users')
-              .doc(fromUserId)
-              .get();
-            return {
-              fromUserId,
-              fromName: userDoc.data()?.name || requestsData[fromUserId].from,
-              status: requestsData[fromUserId].status,
-            };
-          }),
-        );
-        setRequests(requestList);
-
-        // Fetch friends
-        const friendsDoc = await firestore()
-          .collection('friends')
-          .doc(userId)
-          .get();
-        const friendsData = friendsDoc.data() || {};
-        const friendList = await Promise.all(
-          Object.keys(friendsData).map(async friendId => {
-            const userDoc = await firestore()
-              .collection('users')
-              .doc(friendId)
-              .get();
-            return {
-              friendId,
-              friendName: userDoc.data()?.name || friendId,
-            };
-          }),
-        );
-        setFriends(friendList);
-      } catch (err: any) {
-        setError(`Failed to load data: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [userId]);
+  }, []);
 
-  const handleAccept = async (fromUserId: string) => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      await acceptRequest(userId!, fromUserId);
-      setRequests(prev => prev.filter(req => req.fromUserId !== fromUserId));
-      const userDoc = await firestore()
-        .collection('users')
-        .doc(fromUserId)
-        .get();
-      setFriends(prev => [
-        ...prev,
-        {
-          friendId: fromUserId,
-          friendName: userDoc.data()?.name || fromUserId,
-        },
-      ]);
-      Alert.alert('Success', 'Friend request accepted');
-    } catch (err: any) {
-      Alert.alert('Error', `Failed to accept request: ${err.message}`);
+      const req = await getFriendRequests();
+      setRequests(req);
+      const suggestions = await getSuggestedUsers();
+      setSuggestedUsers(suggestions);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDecline = async (fromUserId: string) => {
-    try {
-      await declineRequest(userId!, fromUserId);
-      setRequests(prev => prev.filter(req => req.fromUserId !== fromUserId));
-      Alert.alert('Success', 'Friend request declined');
-    } catch (err: any) {
-      Alert.alert('Error', `Failed to decline request: ${err.message}`);
-    }
+  const handleAccept = async fromUserId => {
+    await acceptFriendRequest(fromUserId);
+    fetchData();
   };
 
-  // Suggested UI for sending a friend request
-  const handleSearch = async () => {
-    if (!searchQuery) return;
-    try {
-      const userSnapshot = await firestore()
-        .collection('users')
-        .where('email', '==', searchQuery)
-        .get();
-      if (userSnapshot.empty) {
-        Alert.alert('Error', 'No user found with this email');
-        return;
-      }
-      const user = userSnapshot.docs[0];
-      const toUserId = user.id;
-      if (toUserId === userId) {
-        Alert.alert('Error', 'Cannot send request to yourself');
-        return;
-      }
-      Alert.alert(
-        'Send Friend Request',
-        `Send a friend request to ${user.data().name}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Send',
-            onPress: () => {
-              // Call sendRequest(userId!, toUserId) here if implemented
-              Alert.alert(
-                'Info',
-                'Friend request would be sent to ' + user.data().name,
-              );
-            },
-          },
-        ],
-      );
-    } catch (err: any) {
-      Alert.alert('Error', `Failed to search user: ${err.message}`);
-    }
+  const handleDecline = async fromUserId => {
+    await declineFriendRequest(fromUserId);
+    fetchData();
   };
 
-  const renderRequestItem = ({ item }: { item: RequestItem }) => (
-    <View style={styles.requestItem}>
-      <Text style={styles.requestText}>{item.fromName} (Pending)</Text>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.acceptButton]}
-          onPress={() => handleAccept(item.fromUserId)}
-        >
-          <Text style={styles.buttonText}>Accept</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.declineButton]}
-          onPress={() => handleDecline(item.fromUserId)}
-        >
-          <Text style={styles.buttonText}>Decline</Text>
-        </TouchableOpacity>
+  const handleSendRequest = async toUserId => {
+    await sendFriendRequest(toUserId);
+    fetchData();
+  };
+
+  const renderRequestItem = ({ item }) => {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.text}>{item.name}</Text>
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.acceptBtn}
+            onPress={() => handleAccept(item.id)}
+          >
+            <Text style={styles.btnText}>{t('requests.accept')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.declineBtn}
+            onPress={() => handleDecline(item.id)}
+          >
+            <Text style={styles.btnText}>{t('requests.decline')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    );
+  };
+
+  const renderSuggestedItem = ({ item }) => (
+    <View style={styles.card}>
+      <Text style={styles.text}>{item.name}</Text>
+      <Text style={styles.subText}>{item.email}</Text>
+      <TouchableOpacity
+        style={styles.requestBtn}
+        onPress={() => handleSendRequest(item.id)}
+      >
+        <Text style={styles.btnText}>{t('requests.sendRequest')}</Text>
+      </TouchableOpacity>
     </View>
   );
 
-  const renderFriendItem = ({ item }: { item: FriendItem }) => (
-    <View style={styles.friendItem}>
-      <Text style={styles.friendText}>Friend: {item.friendName}</Text>
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => fetchData()}
-        >
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  if (loading) return <Text style={styles.loading}>{t('common.loading')}</Text>;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Friend Requests</Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Enter email to send friend request"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+      <View style={styles.tabContainer}>
+        <TabButton
+          title={t('requests.friendRequests')}
+          isActive={activeTab === 'requests'}
+          onPress={() => setActiveTab('requests')}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
+        <TabButton
+          title={t('requests.suggested')}
+          isActive={activeTab === 'suggested'}
+          onPress={() => setActiveTab('suggested')}
+        />
       </View>
-      {requests.length === 0 ? (
-        <Text style={styles.emptyText}>No incoming requests</Text>
+      {activeTab === 'requests' ? (
+        <View style={styles.content}>
+          <Text style={styles.heading}>{t('requests.friendRequests')}</Text>
+          {requests.length > 0 ? (
+            <FlatList
+              data={requests}
+              keyExtractor={item => item.id}
+              renderItem={renderRequestItem}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <Text style={styles.noData}>{t('requests.noRequests')}</Text>
+          )}
+        </View>
       ) : (
-        <FlatList
-          data={requests}
-          renderItem={renderRequestItem}
-          keyExtractor={item => item.fromUserId}
-          ListHeaderComponent={
-            <Text style={styles.sectionHeader}>Incoming Requests</Text>
-          }
-        />
-      )}
-      <Text style={styles.title}>Connected Friends</Text>
-      {friends.length === 0 ? (
-        <Text style={styles.emptyText}>No connected friends</Text>
-      ) : (
-        <FlatList
-          data={friends}
-          renderItem={renderFriendItem}
-          keyExtractor={item => item.friendId}
-          ListHeaderComponent={
-            <Text style={styles.sectionHeader}>Friends</Text>
-          }
-        />
+        <View style={styles.content}>
+          <Text style={styles.heading}>{t('requests.suggestedUsers')}</Text>
+          {suggestedUsers.length > 0 ? (
+            <FlatList
+              data={suggestedUsers}
+              keyExtractor={item => item.id}
+              renderItem={renderSuggestedItem}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <Text style={styles.noData}>{t('requests.noSuggestedUsers')}</Text>
+          )}
+        </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontWeight: '700',
-    fontSize: 20,
-    marginBottom: 12,
-    color: '#333',
-  },
-  sectionHeader: {
-    fontWeight: '600',
-    fontSize: 16,
-    marginVertical: 8,
-    color: '#555',
-  },
-  requestItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  requestText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-  },
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  acceptButton: {
-    backgroundColor: '#28a745',
-  },
-  declineButton: {
-    backgroundColor: '#dc3545',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  friendItem: {
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  friendText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#dc3545',
-    textAlign: 'center',
-    marginVertical: 16,
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 8,
-    marginRight: 8,
-  },
-  searchButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 6,
-    justifyContent: 'center',
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-});
-
-export default RequestsContainer;
+export default RequestedContainer;

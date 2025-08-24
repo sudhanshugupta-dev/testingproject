@@ -121,4 +121,26 @@ dependencies {
 //   implementation 'com.google.firebase:firebase-analytics'
 //   implementation 'com.google.firebase:firebase-auth'
 //   implementation 'com.google.firebase:firebase-database'
+  implementation 'com.google.android.gms:play-services-base:18.5.0'
 }
+project.ext.vectoricons = [
+    iconFontNames: [ 'MaterialIcons.ttf' ]
+]
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+//    iconFontNames: [
+//         'MaterialIcons.ttf',
+//         'MaterialCommunityIcons.ttf',
+//         'FontAwesome.ttf',
+//         'Ionicons.ttf',
+//         'Feather.ttf',
+//         'AntDesign.ttf',
+//         'Entypo.ttf',
+//         'EvilIcons.ttf',
+//         'FontAwesome5_Solid.ttf',
+//         'Foundation.ttf',
+//         'Octicons.ttf',
+//         'SimpleLineIcons.ttf',
+//         'Zocial.ttf'
+//     ]
+// ]
+// apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"

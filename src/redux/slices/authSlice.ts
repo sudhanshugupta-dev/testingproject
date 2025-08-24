@@ -27,6 +27,7 @@ export const loginWithEmail = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
+      console.log(email, password)
       const cred = await signInWithEmail(email, password);
       const token = await cred.user.getIdToken();
       await AsyncStorage.setItem('token', token);

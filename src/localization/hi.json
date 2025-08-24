@@ -10,10 +10,60 @@
     "forgot": "पासवर्ड भूल गए?",
     "sendOtp": "ओटीपी भेजें",
     "verifyOtp": "ओटीपी सत्यापित करें",
-    "resetPassword": "पासवर्ड रीसेट करें"
+    "resetPassword": "पासवर्ड रीसेट करें",
+    "loginGoogle": "गूगल के साथ लॉगिन",
+    "signupGoogle": "गूगल के साथ साइन अप",
+    "placeholders": {
+      "email": "you@example.com",
+      "password": "••••••••",
+      "confirmPassword": "अपना पासवर्ड कनफ़र्म करें"
+    },
+    "error": {
+      "fillAllFields": "कृपया सभी फ़ील्ड भरें",
+      "loginFailed": "लॉगिन विफल",
+      "signupFailed": "साइन अप विफल",
+      "googleLoginFailed": "गूगल साइन-इन विफल",
+      "passwordMismatch": "पासवर्ड मेल नहीं खाते",
+      "invalidEmail": "कृपया एक वैध ईमेल दर्ज करें",
+      "weakPassword": "पासवर्ड कम से कम 6 अक्षर का होना चाहिए"
+    }
   },
   "tabs": { "chat": "चैट", "requests": "अनुरोध", "profile": "प्रोफ़ाइल" },
-  "profile": { "logout": "लॉगआउट", "theme": "थीम", "language": "भाषा" },
-  "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश" },
-  "chat": { "typeMessage": "संदेश लिखें", "send": "भेजें" }
+  "profile": { "logout": "लॉगआउट", "theme": "थीम", "language": "भाषा", "guest": "अतिथि उपयोगकर्ता" },
+  "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश", "french": "फ़्रेंच", "japanese": "जापानी" },
+  "chat": { 
+    "typeMessage": "संदेश लिखें", 
+    "send": "भेजें",
+    "online": "ऑनलाइन",
+    "offline": "ऑफ़लाइन",
+    "searchChats": "चैट खोजें...",
+    "noChats": "अभी तक कोई चैट नहीं, बातचीत शुरू करें!",
+    "noMessages": "अभी तक कोई संदेश नहीं",
+    "friend": "दोस्त",
+    "error": {
+      "invalidUserOrFriend": "अमान्य उपयोगकर्ता या दोस्त ID",
+      "failedToLoadChat": "चैट लोड करने में विफलता। कृपया पुन: प्रयास करें।",
+      "failedToSendMessage": "संदेश भेजने में विफलता। कृपया पुन: प्रयास करें।"
+    }
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "cancel": "रद्द करें",
+    "ok": "ठीक",
+    "save": "सेव करें",
+    "delete": "डिलीट करें",
+    "edit": "एडिट करें"
+  },
+  "requests": {
+    "friendRequests": "दोस्त अनुरोध",
+    "suggested": "सुझाव",
+    "suggestedUsers": "सुझाए गए उपयोगकर्ता",
+    "accept": "स्वीकार करें",
+    "decline": "अस्वीकार करें",
+    "sendRequest": "अनुरोध भेजें",
+    "noRequests": "कोई दोस्त अनुरोध नहीं",
+    "noSuggestedUsers": "कोई सुझाए गए उपयोगकर्ता नहीं"
+  }
 }
