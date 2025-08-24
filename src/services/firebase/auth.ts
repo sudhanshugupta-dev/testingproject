@@ -3,12 +3,12 @@ import firestore from '@react-native-firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // Configure Google Sign-In (call this during app initialization)
-export const configureGoogleSignIn = () => {
-  GoogleSignin.configure({
-    webClientId: 'YOUR_WEB_CLIENT_ID', // Replace with your Firebase Console Google Sign-In webClientId
-    offlineAccess: true,
-  });
-};
+// export const configureGoogleSignIn = () => {
+//   GoogleSignin.configure({
+//     webClientId: '795608926313-e4mrkvn248a7fjpi077j1ilq0f80mak4.apps.googleusercontent.com', // Replace with your Firebase Console Google Sign-In webClientId
+//     offlineAccess: true,
+//   });
+// };
 
 // Add user to Firestore
 const addUserToFirestore = async (
@@ -135,18 +135,60 @@ export const signUpWithEmail = async (
   }
 };
 
-// Sign in with Google
+
+
+
 export const signInWithGoogle = async (): Promise<any> => {
   try {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const { idToken } = await GoogleSignin.signIn();
+    // Configure Google Sign-In (if not already in App.tsx)
+    GoogleSignin.configure({
+      webClientId: '795608926313-e4mrkvn248a7fjpi077j1ilq0f80mak4.apps.googleusercontent.com', // Replace with your Firebase Web Client ID
+      offlineAccess: true,
+    });
+
+   
+   // Check Google Play Services
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('Play Services available');
+    } catch (playError: any) {
+      console.error('Play Services check failed:', playError);
+      throw new Error(`Play Services error: ${playError.message} (Code: ${playError.code})`);
+    }
+
+  // Sign in with Google
+  let userInfo;
+  try {
+    userInfo = await GoogleSignin.signIn();
+    console.log('GoogleSignin.signIn result:', JSON.stringify(userInfo, null, 2));
+  } catch (signInError: any) {
+    console.error('GoogleSignin.signIn error:', signInError);
+    if (signInError.code === statusCodes.SIGN_IN_CANCELLED) {
+      throw new Error('User cancelled the sign-in process');
+    } else if (signInError.code === statusCodes.IN_PROGRESS) {
+      throw new Error('Sign-in operation already in progress');
+    } else if (signInError.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      throw new Error('Google Play Services not available');
+    }
+    throw new Error(`Google sign-in failed: ${signInError.message} (Code: ${signInError.code})`);
+  }
+
+    // Extract idToken from userInfo.data
+    const { idToken } = userInfo.data; // Updated to access idToken correctly
     if (!idToken) {
       throw new Error('Failed to retrieve Google ID token');
     }
+
+    // Create Firebase credential
     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+    // Sign in with Firebase
     const result = await auth().signInWithCredential(googleCredential);
+
+    // Assuming waitForAuthState and addUserToFirestore are defined elsewhere
     const user = await waitForAuthState();
     await addUserToFirestore(user);
+
     console.log('Google sign-in successful:', user.uid);
     return result;
   } catch (error: any) {
@@ -154,9 +196,10 @@ export const signInWithGoogle = async (): Promise<any> => {
       message: error.message,
       code: error.code,
       stack: error.stack,
+      details: error,
     });
     throw new Error(
-      `Google sign-in failed: ${error.message} (Code: ${error.code})`,
+      `Google sign-in failed: ${error.message} (Code: ${error.code || 'unknown'})`,
     );
   }
 };
@@ -216,7 +259,6 @@ export const resetPassword = async (newPassword: string): Promise<boolean> => {
 // Sign out
 export const signOutFirebase = async (): Promise<void> => {
   try {
-    // j
     await auth().signOut();
     console.log('User signed out successfully');
   } catch (error: any) {

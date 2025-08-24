@@ -14,12 +14,16 @@ import { getChatList } from '../../redux/slices/chatsSlice';
 import CustomAvatar from '../../components/CustomAvatar';
 import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
+import { useAppTheme } from '../../themes/useTheme';
+import { useTranslation } from 'react-i18next';
 
 const ChatContainer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { list, loading } = useSelector((s: RootState) => s.chats);
   const nav = useNavigation<any>();
   const [search, setSearch] = useState('');
+  const { colors } = useAppTheme();
+  const { t } = useTranslation();
 
   // ✅ Fetch chat list
   useEffect(() => {
@@ -37,39 +41,38 @@ const ChatContainer = () => {
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <Pressable
-        style={styles.row}
+        style={[styles.row, { borderBottomColor: colors.text + '22', backgroundColor: colors.background }]}
         android_ripple={{ color: '#E5E7EB' }}
         onPress={() =>
-          nav.navigate('ChatRoom', { friendId: item.id, name: item.name })
+          nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name })
         }
       >
         <CustomAvatar name={item.name} />
         <View style={{ marginLeft: 12, flex: 1 }}>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text numberOfLines={1} style={styles.last}>
+          <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+          <Text numberOfLines={1} style={[styles.last, { color: colors.text, opacity: 0.6 }]}>
             {item.lastMessage}
           </Text>
         </View>
       </Pressable>
     ),
-    [nav],
+    [nav, colors],
   );
 
   return (
-    <View style={styles.container}>
-      {/* 🔍 Search Bar */}
-      <View style={styles.searchBar}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>      
+      <View style={[styles.searchBar, { backgroundColor: colors.background, borderBottomColor: colors.text + '22' }]}>
         <TextInput
-          placeholder="Search by name or email..."
+          placeholder={t('chat.typeMessage')}
           value={search}
           onChangeText={setSearch}
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text }]}
           placeholderTextColor="#9CA3AF"
         />
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#2563EB" style={{ flex: 1 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
       ) : filteredList.length === 0 ? (
         // 🟢 Empty State with Lottie
         <View style={styles.emptyContainer}>
@@ -79,7 +82,7 @@ const ChatContainer = () => {
             loop
             style={{ width: 200, height: 200 }}
           />
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.text, opacity: 0.7 }]}>
             No chats yet, start a conversation!
           </Text>
         </View>
@@ -98,21 +101,17 @@ const ChatContainer = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1 },
 
   searchBar: {
-    backgroundColor: '#fff',
     padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   searchInput: {
-    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
     fontSize: 16,
-    color: '#111827',
   },
 
   row: {
@@ -120,11 +119,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#fff',
   },
-  name: { fontWeight: '600', color: '#111827', fontSize: 16 },
-  last: { color: '#6B7280', marginTop: 4, fontSize: 14 },
+  name: { fontWeight: '600', fontSize: 16 },
+  last: { marginTop: 4, fontSize: 14 },
 
   emptyContainer: {
     flex: 1,
@@ -135,7 +132,6 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#6B7280',
     fontWeight: '500',
   },
 });

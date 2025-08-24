@@ -91,8 +91,8 @@ const ensureChatEntries = async (
       participants: [userId1, userId2],
       lastMessage: '',
       lastMessageAt: null,
-      name: user2Data.name || 'Unknown',
-      avatar: user2Data.avatar || null,
+      name: (user2Data as any).name || 'Unknown',
+      avatar: (user2Data as any).avatar || null,
     });
   }
 
@@ -110,8 +110,8 @@ const ensureChatEntries = async (
       participants: [userId1, userId2],
       lastMessage: '',
       lastMessageAt: null,
-      name: user1Data.name || 'Unknown',
-      avatar: user1Data.avatar || null,
+      name: (user1Data as any).name || 'Unknown',
+      avatar: (user1Data as any).avatar || null,
     });
   }
 };
@@ -129,9 +129,10 @@ export const getChatList = async () => {
       .doc(userId)
       .get();
 
-    const friendIds = friendsDoc.exists
-      ? Object.keys(friendsDoc.data() || {})
-      : [];
+    const data = friendsDoc.exists ? friendsDoc.data() || {} : {};
+    const friendIds = Array.isArray((data as any).friendIds)
+      ? ((data as any).friendIds as string[])
+      : Object.keys(data);
 
     // Fetch details for each friend
     const friendDetailsPromises = friendIds.map(async friendId => {
@@ -141,7 +142,7 @@ export const getChatList = async () => {
         return null; // Handle case where user document doesn't exist
       }
 
-      const userData = userDoc.data();
+      const userData = userDoc.data() as any;
       return {
         id: userDoc.id,
         name: userData.name || 'Unknown',
@@ -158,7 +159,7 @@ export const getChatList = async () => {
 
     console.log('Friends list fetched:', friendDetails);
     return friendDetails;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching friends list:', {
       message: error.message,
       code: error.code,
@@ -250,7 +251,7 @@ export const listenToMessages = (
             ...doc.data(),
           }));
           console.log('Messages updated:', msgs);
-          callback(msgs);
+          callback(msgs as any[]);
         },
         error => {
           console.error('Error in message listener:', {
@@ -275,5 +276,80 @@ export const listenToMessages = (
         error.code || 'unknown'
       })`,
     );
+  }
+};
+
+
+// Function to set up presence for the current user
+export const setupUserPresence = async (userId) => {
+  if (!userId) return;
+
+  const userStatusRef = firestore().collection('status').doc(userId);
+
+  try {
+    // Set the user's status to online
+    await userStatusRef.set(
+      {
+        state: 'online',
+        last_changed: firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    console.log('User presence set to online:', userId);
+  } catch (error) {
+    console.error('Error setting up user presence:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+  }
+};
+
+// Function to listen to another user's presence
+export const listenToUserPresence = (userId, callback) => {
+  if (!userId) return () => {};
+
+  const userStatusRef = firestore().collection('status').doc(userId);
+
+  // Listen for changes in the user's status
+  const unsubscribe = userStatusRef.onSnapshot(
+    (snapshot) => {
+      const data = snapshot.data();
+      const isOnline = data && data.state === 'online';
+      console.log(`User ${userId} presence updated: ${isOnline ? 'online' : 'offline'}`);
+     // callback(isOnline);
+      console.log("Check status person", isOnline)
+    },
+    (error) => {
+      console.error('Error listening to user presence:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      callback(false); // Fallback to offline if there's an error
+    }
+  );
+
+  return unsubscribe; // Return unsubscribe function to clean up the listener
+};
+
+// Function to set user offline (call on logout or app unmount)
+export const setUserOffline = async (userId) => {
+  if (!userId) return;
+
+  const userStatusRef = firestore().collection('status').doc(userId);
+
+  try {
+    await userStatusRef.update({
+      state: 'offline',
+      last_changed: firestore.FieldValue.serverTimestamp(),
+    });
+    console.log('User presence set to offline:', userId);
+  } catch (error) {
+    console.error('Error setting user offline:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
   }
 };
