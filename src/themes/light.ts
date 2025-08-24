@@ -1,8 +1,21 @@
 export default {
   background: '#FFFFFF',
-  text: '#111111',
-  primary: '#4F46E5',
-  accent: '#22C55E',
-  card: '#F3F4F6',
-  danger: '#EF4444'
+  surface: '#FAFBFC',
+  text: '#1F2937',
+  textSecondary: '#6B7280',
+  primary: '#6366F1',
+  primaryLight: '#A5B4FC',
+  secondary: '#10B981',
+  accent: '#F59E0B',
+  card: '#F9FAFB',
+  cardBorder: '#E5E7EB',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  success: '#10B981',
+  info: '#3B82F6',
+  shadow: '#00000020',
+  border: '#E5E7EB',
+  placeholder: '#9CA3AF',
+  disabled: '#D1D5DB',
+  overlay: '#00000050'
 };

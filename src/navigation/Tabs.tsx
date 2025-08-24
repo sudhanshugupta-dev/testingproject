@@ -217,3 +217,183 @@ const styles = StyleSheet.create({
 });
 
 export default MainTabs;
+
+
+// import React, { useRef, useEffect } from 'react';
+// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// import { Animated, View, StyleSheet, Platform, Pressable, Text } from 'react-native';
+// import Icon from 'react-native-vector-icons/Ionicons';
+// import ChatScreen from '../screens/Chat';
+// import RequestsScreen from '../screens/Requests';
+// import ProfileScreen from '../screens/Profile';
+// import { useTranslation } from 'react-i18next';
+// import { useAppTheme } from '../../src/themes/useTheme';
+
+// export type MainTabsParamList = {
+//   Chat: undefined;
+//   Requests: undefined;
+//   Profile: undefined;
+// };
+
+// const Tab = createBottomTabNavigator<MainTabsParamList>();
+
+// const AnimatedIcon = ({
+//   name,
+//   color,
+//   focused,
+//   size = 26, // Slightly larger for better visibility
+// }: {
+//   name: string;
+//   color: string;
+//   focused: boolean;
+//   size?: number;
+// }) => {
+//   const scale = useRef(new Animated.Value(focused ? 1.2 : 1)).current;
+
+//   useEffect(() => {
+//     Animated.spring(scale, {
+//       toValue: focused ? 1.2 : 1,
+//       useNativeDriver: true,
+//       tension: 100, // Slightly softer animation
+//       friction: 8,
+//     }).start();
+//   }, [focused, scale]);
+
+//   return (
+//     <Animated.View
+//       style={{
+//         transform: [{ scale }],
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//       }}
+//     >
+//       <Icon name={name} color={color} size={size} />
+//     </Animated.View>
+//   );
+// };
+
+// const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+//   const { t } = useTranslation();
+//   const { colors } = useAppTheme();
+
+//   return (
+//     <View style={[styles.tabBarContainer, { backgroundColor: colors.background }]}>
+//       <View style={[styles.tabBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+//         {state.routes.map((route: any, index: number) => {
+//           const { options } = descriptors[route.key];
+//           const label = options.tabBarLabel || route.name;
+//           const isFocused = state.index === index;
+
+//           const onPress = () => {
+//             const event = navigation.emit({
+//               type: 'tabPress',
+//               target: route.key,
+//               canPreventDefault: true,
+//             });
+
+//             if (!isFocused && !event.defaultPrevented) {
+//               navigation.navigate(route.name);
+//             }
+//           };
+
+//           const getIconName = () => {
+//             switch (route.name) {
+//               case 'Chat':
+//                 return 'chatbubble-ellipses-outline';
+//               case 'Requests':
+//                 return 'people-outline';
+//               case 'Profile':
+//                 return 'person-outline';
+//               default:
+//                 return 'ellipse-outline';
+//             }
+//           };
+
+//           return (
+//             <Pressable
+//               key={route.key}
+//               style={[styles.tabItem, isFocused && styles.activeTabItem]}
+//               onPress={onPress}
+//               accessibilityRole="button"
+//               accessibilityState={{ selected: isFocused }}
+//             >
+//               <AnimatedIcon
+//                 name={getIconName()}
+//                 color={isFocused ? colors.primary : colors.textSecondary}
+//                 focused={isFocused}
+//                 size={26} // Match size
+//               />
+//               <Text
+//                 style={[styles.tabLabel, { color: isFocused ? colors.primary : colors.textSecondary }]}
+//               >
+//                 {label}
+//               </Text>
+//             </Pressable>
+//           );
+//         })}
+//       </View>
+//     </View>
+//   );
+// };
+
+// const MainTabs = () => {
+//   const { t } = useTranslation();
+
+//   return (
+//     <Tab.Navigator
+//       tabBar={(props) => <CustomTabBar {...props} />}
+//       screenOptions={{
+//         headerShown: false,
+//         tabBarShowLabel: false,
+//       }}
+//     >
+//       <Tab.Screen
+//         name="Chat"
+//         component={ChatScreen}
+//         options={{ tabBarLabel: t('tabs.chat') }}
+//       />
+//       <Tab.Screen
+//         name="Requests"
+//         component={RequestsScreen}
+//         options={{ tabBarLabel: t('tabs.requests') }}
+//       />
+//       <Tab.Screen
+//         name="Profile"
+//         component={ProfileScreen}
+//         options={{ tabBarLabel: t('tabs.profile') }}
+//       />
+//     </Tab.Navigator>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   tabBarContainer: {
+//     paddingHorizontal: 16,
+//     paddingBottom: Platform.OS === 'ios' ? 34 : 16, // Safe area padding
+//     paddingTop: 12, // Increased for balance
+//   },
+//   tabBar: {
+//     flexDirection: 'row',
+//     borderRadius: 35,
+//     paddingVertical: 8, // Slightly more padding
+//     paddingHorizontal: 16,
+//     borderTopWidth: 1,
+//   },
+//   tabItem: {
+//     flex: 1,
+//     alignItems: 'center',
+//     paddingVertical: 10,
+//     borderRadius: 30,
+//   },
+//   activeTabItem: {
+//     backgroundColor: 'rgba(99, 102, 241, 0.15)', // Slightly stronger highlight
+//   },
+//   tabLabel: {
+//     fontSize: 13, // Slightly larger for readability
+//     fontWeight: '500',
+//     marginTop: 6, // More space between icon and label
+//     textAlign: 'center',
+//   },
+// });
+
+// export default MainTabs;

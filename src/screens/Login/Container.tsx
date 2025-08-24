@@ -28,12 +28,12 @@ const LoginContainer = () => {
 
   const onLogin = async () => {
     if (!email || !password) {
-      Toast.show({ type: 'error', text1: 'Please enter email and password' });
+      Toast.show({ type: 'error', text1: t('auth.error.fillAllFields') });
       return;
     }
     const res = await dispatch(loginWithEmail({ email, password }));
     if ((res as any).error) {
-      Toast.show({ type: 'error', text1: 'Login failed' });
+      Toast.show({ type: 'error', text1: t('auth.error.loginFailed') });
     } else {
       nav.reset({ index: 0, routes: [{ name: 'Main' }] });
     }
@@ -66,18 +66,19 @@ const LoginContainer = () => {
         label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
-        placeholder="you@example.com"
+        placeholder={t('auth.placeholders.email')}
       />
       <CustomTextInput
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder="••••••••"
+        placeholder={t('auth.placeholders.password')}
         secureTextEntry
       />
       <CustomButton
-        title={loading ? '...' : t('auth.login')}
+        title={t('auth.login')}
         onPress={onLogin}
+        loading={loading}
       />
       <Pressable onPress={() => nav.navigate('Signup')}>
         <Text style={[styles.link, { color: colors.primary }]}>
