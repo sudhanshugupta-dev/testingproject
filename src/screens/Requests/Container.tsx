@@ -15,6 +15,7 @@ import {
 } from '../../services/firebase/requests';
 import {styles} from './styles';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../themes/useTheme';
 
 // Custom Tab Component
 const TabButton = ({ title, isActive, onPress }) => (
@@ -39,6 +40,7 @@ const RequestedContainer = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('requests');
   const { t } = useTranslation();
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     fetchData();
@@ -111,7 +113,7 @@ const RequestedContainer = () => {
   if (loading) return <Text style={styles.loading}>{t('common.loading')}</Text>;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.tabContainer}>
         <TabButton
           title={t('requests.friendRequests')}

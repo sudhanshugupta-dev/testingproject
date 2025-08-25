@@ -17,7 +17,7 @@ export type RootStackParamList = {
   VerifyOTP: { email?: string } | undefined;
   ResetPassword: { email?: string } | undefined;
   Main: undefined;
-  ChatRoom: { roomId: string; name?: string };
+  ChatRoom: { friendId: string; friendName?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

@@ -3,10 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChatScreen from '../screens/Chat';
 import RequestsScreen from '../screens/Requests';
 import ProfileScreen from '../screens/Profile';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
 import { Animated, View, StyleSheet, Dimensions } from 'react-native';
+import { useAppTheme } from '../themes/useTheme';
 
 export type MainTabsParamList = {
   Chat: undefined;
@@ -56,6 +56,8 @@ const AnimatedIcon = ({ name, color, focused, size = 24 }: { name: string; color
 
 const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const { t } = useTranslation();
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   
   return (
     <View style={styles.tabBarContainer}>
@@ -101,14 +103,14 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
               >
                 <AnimatedIcon 
                   name={getIconName()} 
-                  color={isFocused ? '#6366f1' : '#9ca3af'} 
+                  color={isFocused ? colors.primary : colors.textSecondary} 
                   focused={isFocused}
                   size={26}
                 />
                 <Animated.Text 
                   style={[
                     styles.tabLabel,
-                    { color: isFocused ? '#6366f1' : '#9ca3af' }
+                    { color: isFocused ? colors.primary : colors.textSecondary }
                   ]}
                 >
                   {label}
@@ -158,7 +160,8 @@ const MainTabs = () => {
   );
 };
 
-const styles = StyleSheet.create({
+// Create styles function that accepts colors
+const createStyles = (colors: any) => StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
     bottom: 0,
@@ -169,11 +172,11 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 25,
     paddingHorizontal: 8,
     paddingVertical: 12,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: {
       width: 0,
       height: -4,
@@ -182,7 +185,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: colors.border,
   },
   tabItem: {
     flex: 1,
@@ -198,8 +201,8 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   activeTabButton: {
-    backgroundColor: '#f0f9ff',
-    shadowColor: '#6366f1',
+    backgroundColor: colors.primary + '20',
+    shadowColor: colors.primary,
     shadowOffset: {
       width: 0,
       height: 2,

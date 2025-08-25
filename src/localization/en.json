@@ -40,6 +40,11 @@
     "noChats": "No chats yet, start a conversation!",
     "noMessages": "No messages yet",
     "friend": "Friend",
+    "you": "You",
+    "tapToViewProfile": "Tap to view profile",
+    "replyingTo": "Replying to",
+    "cancel": "Cancel",
+    "loadingMessages": "Loading messages...",
     "error": {
       "invalidUserOrFriend": "Invalid user or friend ID",
       "failedToLoadChat": "Failed to load chat. Please try again.",

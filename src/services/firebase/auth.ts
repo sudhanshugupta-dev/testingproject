@@ -258,7 +258,7 @@ export const resetPassword = async (newPassword: string): Promise<boolean> => {
 
 // Sign out
 export const signOutFirebase = async (): Promise<void> => {
-  try {
+ // try {
     // Check if user is signed in with Google
  //  const isSignedInWithGoogle = await GoogleSignin.isSignedIn();
     
@@ -278,7 +278,7 @@ export const signOutFirebase = async (): Promise<void> => {
     // }
     
     console.log('User signed out successfully');
-   } 
+   //} 
    //catch (error: any) {
   //   console.error('Sign-out error:', {
   //     message: error.message,

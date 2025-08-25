@@ -173,6 +173,100 @@ export const getChatList = async () => {
   }
 };
 
+// Message interface for better typing
+export interface Message {
+  id?: string;
+  text: string;
+  senderId: string;
+  createdAt: any;
+  messageType?: 'text' | 'image' | 'file';
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
+  replyTo?: {
+    messageId: string;
+    text: string;
+    senderId: string;
+    senderName?: string;
+  };
+}
+
+// Send a reply message to a chat room
+export const sendReplyMessage = async (
+  roomId: string,
+  message: { 
+    text: string; 
+    senderId: string; 
+    createdAt: number; 
+    replyTo: {
+      messageId: string;
+      text: string;
+      senderId: string;
+      senderName?: string;
+    }
+  },
+): Promise<void> => {
+  try {
+    const userId = auth().currentUser?.uid;
+    if (!userId) throw new Error('User not authenticated');
+    if (message.senderId !== userId)
+      throw new Error('Sender ID does not match authenticated user');
+
+    console.log('Sending reply message to room:', roomId, message);
+
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const messageRef = roomRef.collection('messages').doc();
+    const serverTimestamp = firestore.FieldValue.serverTimestamp();
+
+    const messageData: Message = {
+      text: message.text,
+      senderId: message.senderId,
+      createdAt: serverTimestamp,
+      messageType: 'text',
+      status: 'sent',
+      replyTo: message.replyTo
+    };
+
+    const batch = firestore().batch();
+
+    // Add reply message to messages subcollection
+    batch.set(messageRef, messageData);
+
+    // Update lastMessage in room
+    batch.update(roomRef, {
+      lastMessage: message.text,
+      lastMessageAt: serverTimestamp,
+    });
+
+    // Update chats collection for all participants
+    const chatDocs = await firestore()
+      .collection('chats')
+      .where('roomId', '==', roomId)
+      .get();
+
+    chatDocs.forEach(doc => {
+      batch.update(doc.ref, {
+        lastMessage: message.text,
+        lastMessageAt: serverTimestamp,
+        // Don't update unread count for sender
+        ...(doc.id.startsWith(message.senderId) ? {} : { unreadCount: firestore.FieldValue.increment(1) })
+      });
+    });
+
+    await batch.commit();
+    console.log('Reply message sent successfully');
+  } catch (error: any) {
+    console.error('Error sending reply message:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    throw new Error(
+      `Failed to send reply message: ${error.message} (Code: ${
+        error.code || 'unknown'
+      })`,
+    );
+  }
+};
+
 // Send a message to a chat room
 export const sendMessage = async (
   roomId: string,
@@ -188,19 +282,25 @@ export const sendMessage = async (
 
     const roomRef = firestore().collection('rooms').doc(roomId);
     const messageRef = roomRef.collection('messages').doc();
+    const serverTimestamp = firestore.FieldValue.serverTimestamp();
+
+    const messageData: Message = {
+      text: message.text,
+      senderId: message.senderId,
+      createdAt: serverTimestamp,
+      messageType: 'text',
+      status: 'sent'
+    };
 
     const batch = firestore().batch();
 
     // Add message to messages subcollection
-    batch.set(messageRef, {
-      ...message,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    });
+    batch.set(messageRef, messageData);
 
-    // Update lastMessage in room and chats
+    // Update lastMessage in room
     batch.update(roomRef, {
       lastMessage: message.text,
-      lastMessageAt: firestore.FieldValue.serverTimestamp(),
+      lastMessageAt: serverTimestamp,
     });
 
     // Update chats collection for all participants
@@ -212,7 +312,9 @@ export const sendMessage = async (
     chatDocs.forEach(doc => {
       batch.update(doc.ref, {
         lastMessage: message.text,
-        lastMessageAt: firestore.FieldValue.serverTimestamp(),
+        lastMessageAt: serverTimestamp,
+        // Don't update unread count for sender
+        ...(doc.id.startsWith(message.senderId) ? {} : { unreadCount: firestore.FieldValue.increment(1) })
       });
     });
 
@@ -232,10 +334,10 @@ export const sendMessage = async (
   }
 };
 
-// Listen to messages in a chat room
+// Listen to messages in a chat room with real-time updates
 export const listenToMessages = (
   roomId: string,
-  callback: (messages: any[]) => void,
+  callback: (messages: Message[]) => void,
 ): (() => void) => {
   try {
     console.log('Setting up message listener for room:', roomId);
@@ -243,15 +345,24 @@ export const listenToMessages = (
       .collection('rooms')
       .doc(roomId)
       .collection('messages')
-      .orderBy('createdAt', 'asc')
+      .orderBy('createdAt', 'asc') // Order by creation time ascending
       .onSnapshot(
         snapshot => {
-          const msgs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          console.log('Messages updated:', msgs);
-          callback(msgs as any[]);
+          const msgs: Message[] = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              text: data.text || '',
+              senderId: data.senderId || '',
+              createdAt: data.createdAt,
+              messageType: data.messageType || 'text',
+              status: data.status || 'sent',
+              replyTo: data.replyTo || undefined
+            };
+          });
+          
+          console.log(`Messages updated for room ${roomId}:`, msgs.length, 'messages');
+          callback(msgs);
         },
         error => {
           console.error('Error in message listener:', {
@@ -259,6 +370,8 @@ export const listenToMessages = (
             code: error.code,
             stack: error.stack,
           });
+          // Call callback with empty array on error
+          callback([]);
         },
       );
     return () => {
@@ -351,5 +464,85 @@ export const setUserOffline = async (userId) => {
       code: error.code,
       stack: error.stack,
     });
+  }
+};
+
+// Mark messages as read
+export const markMessagesAsRead = async (roomId: string, userId: string): Promise<void> => {
+  try {
+    const chatRef = firestore().collection('chats').doc(`${userId}_${roomId}`);
+    await chatRef.update({
+      unreadCount: 0,
+      lastReadAt: firestore.FieldValue.serverTimestamp()
+    });
+    console.log('Messages marked as read for user:', userId, 'in room:', roomId);
+  } catch (error: any) {
+    console.error('Error marking messages as read:', error);
+  }
+};
+
+// Function to create mock messages for testing bidirectional chat
+export const createMockMessages = async (roomId: string, userId1: string, userId2: string): Promise<void> => {
+  try {
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const messagesRef = roomRef.collection('messages');
+    const serverTimestamp = firestore.FieldValue.serverTimestamp();
+    
+    const mockMessages: Omit<Message, 'id'>[] = [
+      {
+        text: "Hey there! How are you doing?",
+        senderId: userId1,
+        createdAt: serverTimestamp,
+        messageType: 'text',
+        status: 'sent'
+      },
+      {
+        text: "I'm doing great! Thanks for asking. How about you?",
+        senderId: userId2,
+        createdAt: serverTimestamp,
+        messageType: 'text',
+        status: 'sent'
+      },
+      {
+        text: "I'm good too! Just working on some React Native stuff.",
+        senderId: userId1,
+        createdAt: serverTimestamp,
+        messageType: 'text',
+        status: 'sent'
+      },
+      {
+        text: "That sounds interesting! What kind of app are you building?",
+        senderId: userId2,
+        createdAt: serverTimestamp,
+        messageType: 'text',
+        status: 'sent'
+      },
+      {
+        text: "It's a chat application with Firebase backend. Pretty cool so far!",
+        senderId: userId1,
+        createdAt: serverTimestamp,
+        messageType: 'text',
+        status: 'sent'
+      }
+    ];
+
+    // Add messages with slight delays to maintain order
+    for (let i = 0; i < mockMessages.length; i++) {
+      const messageRef = messagesRef.doc();
+      await messageRef.set({
+        ...mockMessages[i],
+        createdAt: firestore.Timestamp.fromMillis(Date.now() + i * 1000) // Add 1 second between each
+      });
+    }
+
+    // Update room with last message
+    await roomRef.update({
+      lastMessage: mockMessages[mockMessages.length - 1].text,
+      lastMessageAt: serverTimestamp
+    });
+
+    console.log('Mock messages created successfully for room:', roomId);
+  } catch (error: any) {
+    console.error('Error creating mock messages:', error);
   }
 };
