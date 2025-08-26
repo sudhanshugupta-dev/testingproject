@@ -38,47 +38,102 @@ const ChatContainer = () => {
   );
 
   // ✅ Render each chat row
+  // const renderItem = useCallback(
+  //   ({ item }: { item: any }) => (
+  //     <Pressable
+  //       style={[styles.row, { borderBottomColor: colors.text + '22', backgroundColor: colors.background }]}
+  //       android_ripple={{ color: colors.primary + '20' }}
+  //       onPress={() => {
+  //         // Mark as read when opening chat
+  //         if (item.unreadCount > 0) {
+  //           dispatch(markChatAsRead(item.id));
+  //         }
+  //         nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name })
+  //       }}
+  //     >
+  //       <CustomAvatar name={item.name} />
+  //       <View style={{ marginLeft: 12, flex: 1 }}>
+  //         <Text style={[
+  //           styles.name, 
+  //           { color: colors.text },
+  //           item.unreadCount > 0 && { fontWeight: 'bold' }
+  //         ]}>
+  //           {item.name}
+  //         </Text>
+  //         <Text numberOfLines={1} style={[
+  //           styles.last, 
+  //           { color: colors.text, opacity: 0.6 },
+  //           item.unreadCount > 0 && { fontWeight: '600', opacity: 0.8 }
+  //         ]}>
+  //           {item.lastMessage || t('chat.noMessages')}
+  //         </Text>
+  //       </View>
+  //       {item.unreadCount > 0 && (
+  //         <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+  //           <Text style={styles.unreadText}>
+  //             {item.unreadCount > 99 ? '99+' : item.unreadCount}
+  //           </Text>
+  //         </View>
+  //       )}
+  //     </Pressable>
+  //   ),
+  //   [nav, colors, dispatch, t],
+  // );
+
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <Pressable
-        style={[styles.row, { borderBottomColor: colors.text + '22', backgroundColor: colors.background }]}
-        android_ripple={{ color: colors.primary + '20' }}
-        onPress={() => {
-          // Mark as read when opening chat
-          if (item.unreadCount > 0) {
-            dispatch(markChatAsRead(item.id));
-          }
-          nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name })
-        }}
-      >
-        <CustomAvatar name={item.name} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
-          <Text style={[
-            styles.name, 
+  ({ item }: { item: any }) => (
+    <Pressable
+      style={[styles.row, { borderBottomColor: colors.text + '22', backgroundColor: colors.background }]}
+      android_ripple={{ color: colors.primary + '20' }}
+      onPress={() => {
+        if (item.unreadCount > 0) {
+          dispatch(markChatAsRead(item.id));
+        }
+        nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name }); // item.id is roomId
+      }}
+    >
+      <CustomAvatar name={item.name} />
+      <View style={{ marginLeft: 12, flex: 1 }}>
+        <Text
+          style={[
+            styles.name,
             { color: colors.text },
-            item.unreadCount > 0 && { fontWeight: 'bold' }
-          ]}>
-            {item.name}
-          </Text>
-          <Text numberOfLines={1} style={[
-            styles.last, 
+            item.unreadCount > 0 && { fontWeight: 'bold' },
+          ]}
+        >
+          {item.name}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.last,
             { color: colors.text, opacity: 0.6 },
-            item.unreadCount > 0 && { fontWeight: '600', opacity: 0.8 }
-          ]}>
-            {item.lastMessage || t('chat.noMessages')}
+            item.unreadCount > 0 && { fontWeight: '600', opacity: 0.8 },
+          ]}
+        >
+          {item.lastMessage
+            ? item.lastMessage.length > 50
+              ? item.lastMessage.substring(0, 47) + '...'
+              : item.lastMessage
+            : t('chat.noMessages')}
+        </Text>
+        {item.timestamp && (
+          <Text style={[styles.timestamp, { color: colors.text, opacity: 0.5 }]}>
+            {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        )}
+      </View>
+      {item.unreadCount > 0 && (
+        <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+          <Text style={styles.unreadText}>
+            {item.unreadCount > 99 ? '99+' : item.unreadCount}
           </Text>
         </View>
-        {item.unreadCount > 0 && (
-          <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.unreadText}>
-              {item.unreadCount > 99 ? '99+' : item.unreadCount}
-            </Text>
-          </View>
-        )}
-      </Pressable>
-    ),
-    [nav, colors, dispatch, t],
-  );
+      )}
+    </Pressable>
+  ),
+  [nav, colors, dispatch, t],
+);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>      

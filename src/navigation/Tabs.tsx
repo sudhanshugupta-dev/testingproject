@@ -173,17 +173,18 @@ const createStyles = (colors: any) => StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.card,
-    borderRadius: 25,
+    borderRadius: 50,
     paddingHorizontal: 8,
+    
     paddingVertical: 12,
     shadowColor: colors.shadow,
     shadowOffset: {
       width: 0,
-      height: -4,
+      height: -7,
     },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 20,
+    elevation: 40,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -209,7 +210,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+   // elevation: 8,
   },
   tabLabel: {
     fontSize: 12,

@@ -13,12 +13,29 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
 } from '../../services/firebase/requests';
-import {styles} from './styles';
+
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../themes/useTheme';
+import { createStyles } from './styles';
 
 // Custom Tab Component
-const TabButton = ({ title, isActive, onPress }) => (
+
+
+
+const RequestedContainer = () => {
+  const [requests, setRequests] = useState([]);
+  const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('requests');
+  const { t } = useTranslation();
+  const { colors } = useAppTheme(); // Correctly destructure colors
+  const styles = createStyles(colors);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const TabButton = ({ title, isActive, onPress }) => (
   <TouchableOpacity
     style={[styles.tab, isActive ? styles.activeTab : styles.inactiveTab]}
     onPress={onPress}
@@ -33,18 +50,6 @@ const TabButton = ({ title, isActive, onPress }) => (
     </Text>
   </TouchableOpacity>
 );
-
-const RequestedContainer = () => {
-  const [requests, setRequests] = useState([]);
-  const [suggestedUsers, setSuggestedUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('requests');
-  const { t } = useTranslation();
-  const { colors } = useAppTheme();
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);

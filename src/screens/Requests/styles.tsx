@@ -1,9 +1,8 @@
 import { StyleSheet } from 'react-native';
 import {useAppTheme } from '../../themes/useTheme'
 
-//const { colors, fonts} = useAppTheme();
-//const colors = useAppTheme();
-export const styles = StyleSheet.create({
+//const { colors, fonts} = useAppTheme();const colors = useAppTheme();
+export const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
@@ -12,7 +11,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 10,
     padding: 4,
     elevation: 2,
@@ -28,7 +27,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   inactiveTab: {
     backgroundColor: 'transparent',
@@ -41,7 +40,7 @@ export const styles = StyleSheet.create({
     color: '#fff',
   },
   inactiveTabText: {
-    color: '#007AFF',
+    color: colors.primary,
   },
   content: {
     flex: 1,
@@ -50,14 +49,14 @@ export const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 12,
-    color: '#333',
+    color: colors.text,
   },
   card: {
     padding: 16,
     marginVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    elevation: 3,
+    backgroundColor: colors.card,
+   elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -66,11 +65,11 @@ export const styles = StyleSheet.create({
   text: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color:colors.text,
   },
   subText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
     marginTop: 4,
   },
   row: {
@@ -94,7 +93,7 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   requestBtn: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -102,7 +101,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    color: '#fff',
+    color: colors.text,
     fontWeight: '600',
     fontSize: 14,
     textAlign: 'center',
@@ -116,7 +115,7 @@ export const styles = StyleSheet.create({
   },
   noData: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
     textAlign: 'center',
     marginTop: 20,
   },

@@ -64,7 +64,7 @@
   "requests": {
     "friendRequests": "Friend Requests",
     "suggested": "Suggested",
-    "suggestedUsers": "Suggested Users",
+    "suggestedUsers": "Suggested Person",
     "accept": "Accept",
     "decline": "Decline",
     "sendRequest": "Send Request",

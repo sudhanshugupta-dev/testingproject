@@ -28,7 +28,7 @@
       "weakPassword": "पासवर्ड कम से कम 6 अक्षर का होना चाहिए"
     }
   },
-  "tabs": { "chat": "चैट", "requests": "अनुरोध", "profile": "प्रोफ़ाइल" },
+  "tabs": { "chat": "चैट", "requests": "निवेदन", "profile": "प्रोफ़ाइल" },
   "profile": { "logout": "लॉगआउट", "theme": "थीम", "language": "भाषा", "guest": "अतिथि उपयोगकर्ता" },
   "language": { "select": "भाषा चुनें", "english": "अंग्रेज़ी", "hindi": "हिंदी", "spanish": "स्पेनिश", "french": "फ़्रेंच", "japanese": "जापानी" },
   "chat": { 

@@ -14,10 +14,10 @@ const SplashContainer = () => {
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <LottieView source={require('../../assets/Chatbot.json')} autoPlay loop style={{ width: 160, height: 160 }} />
       <Animated.Text style={[styles.title, { opacity, color: colors.text }]}>{t('app.title')}</Animated.Text>
-      <Text style={[styles.subtitle, { color: colors.text, opacity: 0.6 }]}>Loading...</Text>
+      {/* <Text style={[styles.subtitle, { color: colors.text, opacity: 0.6 }]}>Loading...</Text> */}
     </View>
   );
 };
