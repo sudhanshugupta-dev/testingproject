@@ -1,14 +1,7 @@
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-// Configure Google Sign-In (call this during app initialization)
-// export const configureGoogleSignIn = () => {
-//   GoogleSignin.configure({
-//     webClientId: '795608926313-e4mrkvn248a7fjpi077j1ilq0f80mak4.apps.googleusercontent.com', // Replace with your Firebase Console Google Sign-In webClientId
-//     offlineAccess: true,
-//   });
-// };
 
 // Add user to Firestore
 const addUserToFirestore = async (

@@ -43,11 +43,13 @@ const LoginContainer = () => {
     try {
       const result = await signInWithGoogle();
       const token = await result.user.getIdToken();
+       console.log("token0", result);
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem(
         'user',
         JSON.stringify({ uid: result.user.uid, email: result.user.email })
       );
+     
       dispatch(restoreAuth({ token, user: { uid: result.user.uid, email: result.user.email } }));
       nav.reset({ index: 0, routes: [{ name: 'Main' }] }); // Verify 'Main' exists
     } catch (error: any) {

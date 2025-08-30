@@ -77,27 +77,26 @@ export const sendFriendRequest = async (toUserId: string): Promise<void> => {
     throw new Error(`Failed to send friend request: ${error.message}`);
   }
 };
-/** --------------------------
- *  ACCEPT FRIEND REQUEST
- * --------------------------- */
+
+
 export const acceptFriendRequest = async (fromUserId: string) => {
   const currentUserId = getCurrentUserId();
 
   try {
     const batch = firestore().batch();
 
-    // Update friend requests
-    const currentUserRef = firestore()
+    // --- Friend Requests Status Update ---
+    const currentUserReqRef = firestore()
       .collection('friendRequests')
       .doc(currentUserId);
-    const fromUserRef = firestore()
+    const fromUserReqRef = firestore()
       .collection('friendRequests')
       .doc(fromUserId);
 
-    batch.update(currentUserRef, { [`received.${fromUserId}`]: 'accepted' });
-    batch.update(fromUserRef, { [`sent.${currentUserId}`]: 'accepted' });
+    batch.update(currentUserReqRef, { [`received.${fromUserId}`]: 'accepted' });
+    batch.update(fromUserReqRef, { [`sent.${currentUserId}`]: 'accepted' });
 
-    // Add to friends (as both map and array for compatibility)
+    // --- Friends (Legacy/Compatibility: Map + Array) ---
     const currentFriendsRef = firestore()
       .collection('friends')
       .doc(currentUserId);
@@ -106,14 +105,48 @@ export const acceptFriendRequest = async (fromUserId: string) => {
     batch.set(currentFriendsRef, { [fromUserId]: true }, { merge: true });
     batch.set(fromFriendsRef, { [currentUserId]: true }, { merge: true });
 
-    batch.set(currentFriendsRef, { friendIds: firestore.FieldValue.arrayUnion(fromUserId) }, { merge: true });
-    batch.set(fromFriendsRef, { friendIds: firestore.FieldValue.arrayUnion(currentUserId) }, { merge: true });
+    batch.set(
+      currentFriendsRef,
+      { friendIds: firestore.FieldValue.arrayUnion(fromUserId) },
+      { merge: true }
+    );
+    batch.set(
+      fromFriendsRef,
+      { friendIds: firestore.FieldValue.arrayUnion(currentUserId) },
+      { merge: true }
+    );
 
-    // Commit the batch
+    // --- Store in users/{userId}/friends subcollection ---
+    const currentUserFriendRef = firestore()
+      .collection('users')
+      .doc(currentUserId)
+      .collection('friends')
+      .doc(fromUserId);
+
+    const fromUserFriendRef = firestore()
+      .collection('users')
+      .doc(fromUserId)
+      .collection('friends')
+      .doc(currentUserId);
+
+    batch.set(currentUserFriendRef, {
+      friendId: fromUserId,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    batch.set(fromUserFriendRef, {
+      friendId: currentUserId,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    // --- Commit All ---
     await batch.commit();
 
-    // Fetch the profile details of the accepted user
-    const userDoc = await firestore().collection('users').doc(fromUserId).get();
+    // --- Fetch profile of accepted user ---
+    const userDoc = await firestore()
+      .collection('users')
+      .doc(fromUserId)
+      .get();
 
     if (!userDoc.exists) {
       throw new Error('User profile not found');
@@ -125,13 +158,13 @@ export const acceptFriendRequest = async (fromUserId: string) => {
       name: userData.name || 'Unknown',
       email: userData.email || 'No email',
       avatar: userData.avatar || null,
-      // Add other relevant fields as needed
     };
   } catch (error: any) {
     console.error('Error accepting friend request:', error);
     throw error;
   }
 };
+
 /** --------------------------
  *  DECLINE FRIEND REQUEST
  * --------------------------- */
