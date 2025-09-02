@@ -28,43 +28,42 @@ export const getOrCreateChatRoom = async (
   userId2: string,
 ): Promise<string> => {
   try {
-    // Query for existing rooms where the current user is a participant
-    const roomsSnapshot = await firestore()
-      .collection('rooms')
-      .where('participants', 'array-contains', userId1)
-      .get();
-
-    // Check if any room has exactly the two participants
-    for (const doc of roomsSnapshot.docs) {
-      const participants = doc.data().participants as string[];
-      if (
-        participants.length === 2 &&
-        participants.includes(userId1) &&
-        participants.includes(userId2)
-      ) {
-        console.log('Existing chat room found:', doc.id);
-        // Ensure chats collection has entries for both users
-        const roomId = doc.id;
-        await ensureChatEntries(roomId, userId1, userId2);
-        return roomId;
-      }
+    // Prevent self-chat
+    if (userId1 === userId2) {
+      throw new Error("Cannot create chat room with yourself");
     }
 
-    // No existing room found, create a new one
+    console.log("Creating/getting chat room for users:", userId1, userId2);
+    
+    // Generate consistent room ID (sorted to ensure same room for both users)
     const roomId = generateRoomId(userId1, userId2);
+    console.log("Generated room ID:", roomId);
+    
+    // Check if room already exists
     const roomRef = firestore().collection('rooms').doc(roomId);
-
+    const roomDoc = await roomRef.get();
+    
+    if (roomDoc.exists) {
+      console.log('Existing chat room found:', roomId);
+      // Ensure chat entries exist
+      await ensureChatEntries(roomId, userId1, userId2);
+      return roomId;
+    }
+    
+    // Create new room
+    console.log('Creating new chat room:', roomId);
     await roomRef.set({
       participants: [userId1, userId2],
-      createdAt: Date.now(),
+      createdAt: firestore.FieldValue.serverTimestamp(),
       lastMessage: '',
       lastMessageAt: null,
+      createdBy: userId1,
     });
-
-    // Create or update chats collection for both users
+    
+    // Create chat entries for both users
     await ensureChatEntries(roomId, userId1, userId2);
-
-    console.log('New chat room created:', roomId);
+    
+    console.log('New chat room created successfully:', roomId);
     return roomId;
   } catch (error: any) {
     console.error('Error creating/fetching chat room:', {
@@ -86,23 +85,47 @@ const ensureChatEntries = async (
   userId1: string,
   userId2: string,
 ) => {
-  // For user1
-  const user1ChatRef = firestore()
-    .collection('rooms')
-    .doc(`${userId1}_${roomId}`);
-  const user1ChatDoc = await user1ChatRef.get();
-  if (!user1ChatDoc.exists) {
-    // Fetch user2 details for name and avatar
+  try {
+    // Create entries in chats collection for both users
+    const batch = firestore().batch();
+    
+    // Get user details
+    const user1Doc = await firestore().collection('users').doc(userId1).get();
     const user2Doc = await firestore().collection('users').doc(userId2).get();
-    const user2Data = user2Doc.data() || {};
-    await user1ChatRef.set({
+    
+    const user1Data = user1Doc.exists ? user1Doc.data() : {};
+    const user2Data = user2Doc.exists ? user2Doc.data() : {};
+    
+    // Create chat entry for user1
+    const user1ChatRef = firestore().collection('chats').doc(`${userId1}_${roomId}`);
+    batch.set(user1ChatRef, {
       roomId,
       participants: [userId1, userId2],
       lastMessage: '',
       lastMessageAt: null,
-      name: (user2Data as any).name || 'Unknown',
-      avatar: (user2Data as any).avatar || null,
-    });
+      name: (user2Data as any)?.name || (user2Data as any)?.email || 'Unknown',
+      avatar: (user2Data as any)?.avatar || null,
+      unreadCount: 0,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    
+    // Create chat entry for user2
+    const user2ChatRef = firestore().collection('chats').doc(`${userId2}_${roomId}`);
+    batch.set(user2ChatRef, {
+      roomId,
+      participants: [userId1, userId2],
+      lastMessage: '',
+      lastMessageAt: null,
+      name: (user1Data as any)?.name || (user1Data as any)?.email || 'Unknown',
+      avatar: (user1Data as any)?.avatar || null,
+      unreadCount: 0,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    
+    await batch.commit();
+    console.log('Chat entries created for room:', roomId);
+  } catch (error) {
+    console.error('Error creating chat entries:', error);
   }
 };
 
@@ -310,24 +333,40 @@ return () => {
 
 
 
+// Media item interface
+export interface MediaItem {
+  uri: string;
+  type: string;
+}
+
 // Message interface for better typing
 export interface Message {
-  [x: string]: MediaItem[] | undefined;
   id?: string;
   text: string;
   senderId: string;
+  receiverId?: string;
   createdAt: any;
-  messageType?: 'text' | 'image' | 'file';
+  messageType?: 'text' | 'image' | 'video' | 'voice' | 'mixed';
   status?: 'sending' | 'sent' | 'delivered' | 'read';
+  media?: MediaItem[];
+  voiceUri?: string;
+  voiceDuration?: number;
   replyTo?: {
     messageId: string;
     text: string;
     senderId: string;
     senderName?: string;
   };
-  isSeen : boolean;
-  seenBy : {
-     
+  isSeen: boolean;
+  seenBy: Record<string, boolean>;
+  deleted?: boolean;
+  deletedAt?: any;
+  deletedBy?: string;
+  forwardedFrom?: {
+    messageId: string;
+    roomId: string;
+    originalSenderId: string;
+    forwardedAt: any;
   };
 }
 
@@ -541,11 +580,20 @@ export const listenToMessages = (
               id: doc.id,
               text: data.text || '',
               senderId: data.senderId || '',
+              receiverId: data.receiverId || '',
               createdAt: data.createdAt,
-              media: data.media,
+              media: data.media || [],
               messageType: data.messageType || 'text',
               status: data.status || 'sent',
-              replyTo: data.replyTo || undefined
+              replyTo: data.replyTo || undefined,
+              isSeen: data.isSeen || false,
+              seenBy: data.seenBy || {},
+              voiceUri: data.voiceUri,
+              voiceDuration: data.voiceDuration,
+              deleted: data.deleted || false,
+              deletedAt: data.deletedAt,
+              deletedBy: data.deletedBy,
+              forwardedFrom: data.forwardedFrom,
             };
           });
           
