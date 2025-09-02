@@ -26,6 +26,12 @@ export const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
+  btnText: {
+  color: '#fff', // ✅ always readable
+  fontWeight: '600',
+  fontSize: 14,
+  textAlign: 'center',
+},
   activeTab: {
     backgroundColor: colors.primary,
   },

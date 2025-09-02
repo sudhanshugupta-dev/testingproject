@@ -249,37 +249,39 @@ export const resetPassword = async (newPassword: string): Promise<boolean> => {
   }
 };
 
-// Sign out
+
 export const signOutFirebase = async (): Promise<void> => {
- // try {
+  try {
     // Check if user is signed in with Google
- //  const isSignedInWithGoogle = await GoogleSignin.isSignedIn();
-    
+    const currentUser = await GoogleSignin.getCurrentUser();
+    const isSignedInWithGoogle = !!currentUser;
+
     // Sign out from Firebase
-    await auth().signOut;
-    
+    await auth().signOut();
+
     // Sign out from Google if signed in with Google
-    // if (isSignedInWithGoogle) {
-    //   try {
-    //     await GoogleSignin.revokeAccess();
-    //     await GoogleSignin.signOut();
-    //     console.log('Google sign-out successful');
-    //   } catch (googleSignOutError: any) {
-    //     console.warn('Google sign-out warning (may not affect Firebase logout):', googleSignOutError.message);
-    //     // Don't throw error for Google sign-out issues as Firebase logout was successful
-    //   }
-    // }
-    
+    if (isSignedInWithGoogle) {
+      try {
+        await GoogleSignin.revokeAccess();
+        await GoogleSignin.signOut();
+        console.log('Google sign-out successful');
+      } catch (googleSignOutError: any) {
+        console.warn(
+          'Google sign-out warning (may not affect Firebase logout):',
+          googleSignOutError.message,
+        );
+      }
+    }
+
     console.log('User signed out successfully');
-   //} 
-   //catch (error: any) {
-  //   console.error('Sign-out error:', {
-  //     message: error.message,
-  //     code: error.code,
-  //     stack: error.stack,
-  //   });
-  //   throw new Error(
-  //     `Failed to sign out: ${error.message} (Code: ${error.code})`,
-  //   );
-  // }
+  } catch (error: any) {
+    console.error('Sign-out error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    throw new Error(
+      `Failed to sign out: ${error.message} (Code: ${error.code})`,
+    );
+  }
 };

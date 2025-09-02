@@ -174,7 +174,7 @@ const ChatContainer = () => {
           { backgroundColor: colors.background, borderBottomColor: colors.text + '22' },
         ]}
       >
-        <TextInput
+        <TextInput  
           placeholder={t('chat.searchChats')}
           value={search}
           onChangeText={setSearch}
@@ -182,6 +182,7 @@ const ChatContainer = () => {
           placeholderTextColor={colors.text + '60'}
         />
       </View>
+
 
       {/* Chat List */}
       <FlatList
