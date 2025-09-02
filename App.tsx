@@ -6,6 +6,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import './src/localization/i18n';
 import { bootstrapApp } from './src/redux/slices/appBootstrap';
 import Toast from 'react-native-toast-message';
+//import "react-native-gesture-handler
 import { getApp } from '@react-native-firebase/app';
 // import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
