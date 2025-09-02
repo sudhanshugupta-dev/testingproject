@@ -216,46 +216,103 @@ export const listenToChatList = (
 
   let unsubscribes: (() => void)[] = [];
 
-  // 1. Listen to my friends
-  const unsubFriends = listenToFriends(friendIds => {
-    // Clear old listeners
-    unsubscribes.forEach(unsub => unsub());
-    unsubscribes = [];
+//   // 1. Listen to my friends
+//   const unsubFriends = listenToFriends(friendIds => {
+//     // Clear old listeners
+//     unsubscribes.forEach(unsub => unsub());
+//     unsubscribes = [];
 
-    const chats: Record<string, ChatItem> = {};
+//     const chats: Record<string, ChatItem> = {};
 
-    friendIds.forEach(friendId => {
-      const unsubChat = listenToChatForFriend(friendId, chatItem => {
-        console.log("Chat Item kya hai", chatItem)
-        if (chatItem) {
-          chats[friendId] = chatItem;
-          // Sort by lastMessage timestamp
-          const sorted = Object.values(chats).sort((a, b) => {
-            const t1 = a.lastMessage?.timestamp?.toMillis?.() || 0;
-            const t2 = b.lastMessage?.timestamp?.toMillis?.() || 0;
-            return t2 - t1;
-          });
-          onData(sorted);
-        }
+//     friendIds.forEach(friendId => {
+//       const unsubChat = listenToChatForFriend(friendId, chatItem => {
+//         console.log("Chat Item kya hai", chatItem)
+//         if (chatItem) {
+//           chats[friendId] = chatItem;
+//           // Sort by lastMessage timestamp
+//           const sorted = Object.values(chats).sort((a, b) => {
+//             const t1 = a.lastMessage?.timestamp?.toMillis?.() || 0;
+//             const t2 = b.lastMessage?.timestamp?.toMillis?.() || 0;
+//             return t2 - t1;
+//           });
+//           onData(sorted);
+//         }
+//       });
+
+//       unsubscribes.push(unsubChat as any);
+//     });
+//   });
+
+//   return () => {
+//     try {
+//       unsubFriends();
+//       unsubscribes.forEach(unsub => unsub());
+//     } catch (err: any) {
+//       if (onError) onError(err);
+//     }
+//   };
+// };
+
+
+const unsubFriends = listenToFriends(friendIds => {
+  // Clear old listeners
+  unsubscribes.forEach(unsub => unsub());
+  unsubscribes = [];
+
+  const chats: Record<string, ChatItem> = {};
+
+  // 👇 Add myself into the list along with friends
+  const allIds = [...friendIds, userId]; // currentUserId = your uid
+
+  allIds.forEach(friendId => {
+    // Pre-fill placeholder
+    chats[friendId] = {
+      friendId,
+      lastMessage: null, // Empty chat until real data comes
+    } as unknown as ChatItem;
+
+    const unsubChat = listenToChatForFriend(friendId, chatItem => {
+      console.log("Chat Item kya hai", chatItem);
+
+      if (chatItem) {
+        chats[friendId] = chatItem;
+      }
+
+      // Always sort (self will also be included)
+      const sorted = Object.values(chats).sort((a, b) => {
+        const t1 = a.lastMessage?.timestamp?.toMillis?.() || 0;
+        const t2 = b.lastMessage?.timestamp?.toMillis?.() || 0;
+        return t2 - t1;
       });
 
-      unsubscribes.push(unsubChat as any);
+      onData(sorted);
     });
+
+    unsubscribes.push(unsubChat as any);
   });
 
-  return () => {
-    try {
-      unsubFriends();
-      unsubscribes.forEach(unsub => unsub());
-    } catch (err: any) {
-      if (onError) onError(err);
-    }
-  };
+  // Trigger at least once so UI shows empty list with self + friends
+  if (allIds.length > 0) {
+    const sorted = Object.values(chats);
+    onData(sorted);
+  }
+});
+
+return () => {
+  try {
+    unsubFriends();
+    unsubscribes.forEach(unsub => unsub());
+  } catch (err: any) {
+    if (onError) onError(err);
+  }
 };
+};
+
 
 
 // Message interface for better typing
 export interface Message {
+  [x: string]: MediaItem[] | undefined;
   id?: string;
   text: string;
   senderId: string;
@@ -365,35 +422,58 @@ export const sendReplyMessage = async (
 // Send a message to a chat room
 export const sendMessage = async (
   roomId: string,
-  message: { text: string; senderId: string; createdAt: number, receiverId: string},
+  message: {
+    text: string;
+    senderId: string;
+    createdAt: number;
+    receiverId: string;
+    media?: { uri: string; type: string }[];
+  },
 ): Promise<void> => {
   try {
     const userId = auth().currentUser?.uid;
-    if (!userId) throw new Error('User not authenticated');
+    if (!userId) throw new Error("User not authenticated");
     if (message.senderId !== userId)
-      throw new Error('Sender ID does not match authenticated user');
-    const friendId = message.senderId;
-    console.log('Sending message to room:', roomId, message, ":sf", userId);
-    console.log(userId, "user", "friend", message.receiverId)
+      throw new Error("Sender ID does not match authenticated user");
 
+    console.log("Sending message to room:", roomId, message, ":sf", userId);
 
-    const roomRef = firestore().collection('rooms').doc(roomId);
-    const messageRef = roomRef.collection('messages').doc();
+    const roomRef = firestore().collection("rooms").doc(roomId);
+    const messageRef = roomRef.collection("messages").doc();
     const serverTimestamp = firestore.FieldValue.serverTimestamp();
-    const receiverId = message.receiverId
+    const receiverId = message.receiverId;
 
-   
+    // ✅ Determine message type
+    let messageType: "text" | "image" | "video" | "mixed" = "text";
+    if (message.media && message.media.length > 0) {
+      const hasImages = message.media.some(m => m.type.startsWith("image"));
+      const hasVideos = message.media.some(m => m.type.startsWith("video"));
+
+      if (hasImages && hasVideos) messageType = "mixed";
+      else if (hasVideos) messageType = "video";
+      else messageType = "image";
+    }
+
+    // ✅ Pick preview text for lastMessage
+    let lastMessagePreview = message.text || "";
+    if (!lastMessagePreview && messageType !== "text") {
+      if (messageType === "image") lastMessagePreview = "📷 Image";
+      else if (messageType === "video") lastMessagePreview = "🎥 Video";
+      else if (messageType === "mixed") lastMessagePreview = "📷🎥 Media";
+    }
+
     const messageData: Message = {
       text: message.text,
       senderId: message.senderId,
       createdAt: serverTimestamp,
-      messageType: 'text',
-      status: 'sent',
-      isSeen: 'false',
+      messageType,
+      status: "sent",
+      isSeen: "false",
+      media: message.media || [],
       seenBy: {
-        [userId]: true,   // sender automatically sees their own
-        [receiverId]: false // receiver starts unseen
-  }
+        [userId]: true, // sender auto sees own
+        [receiverId]: false, // receiver starts unseen
+      },
     };
 
     const batch = firestore().batch();
@@ -403,40 +483,43 @@ export const sendMessage = async (
 
     // Update lastMessage in room
     batch.update(roomRef, {
-      lastMessage: message.text,
+      lastMessage: lastMessagePreview,
       lastMessageAt: serverTimestamp,
     });
 
     // Update chats collection for all participants
     const chatDocs = await firestore()
-      .collection('chats')
-      .where('roomId', '==', roomId)
+      .collection("chats")
+      .where("roomId", "==", roomId)
       .get();
 
-    chatDocs.forEach(doc => {
+    chatDocs.forEach((doc) => {
       batch.update(doc.ref, {
-        lastMessage: message.text,
+        lastMessage: lastMessagePreview,
         lastMessageAt: serverTimestamp,
-        // Don't update unread count for sender
-        ...(doc.id.startsWith(message.senderId) ? {} : { unreadCount: firestore.FieldValue.increment(1) })
+        // Don't increment unread count for sender
+        ...(doc.id.startsWith(message.senderId)
+          ? {}
+          : { unreadCount: firestore.FieldValue.increment(1) }),
       });
     });
 
     await batch.commit();
-    console.log('Message sent successfully');
+    console.log("✅ Message sent successfully");
   } catch (error: any) {
-    console.error('Error sending message:', {
+    console.error("❌ Error sending message:", {
       message: error.message,
       code: error.code,
       stack: error.stack,
     });
     throw new Error(
       `Failed to send message: ${error.message} (Code: ${
-        error.code || 'unknown'
-      })`,
+        error.code || "unknown"
+      })`
     );
   }
 };
+
 
 // Listen to messages in a chat room with real-time updates
 export const listenToMessages = (
@@ -459,6 +542,7 @@ export const listenToMessages = (
               text: data.text || '',
               senderId: data.senderId || '',
               createdAt: data.createdAt,
+              media: data.media,
               messageType: data.messageType || 'text',
               status: data.status || 'sent',
               replyTo: data.replyTo || undefined

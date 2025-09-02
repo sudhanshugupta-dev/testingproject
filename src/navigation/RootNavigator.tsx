@@ -8,6 +8,7 @@ import VerifyOTPScreen from '../screens/VerifyOTP';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import MainTabs from './Tabs';
 import ChatRoom from '../screens/ChatRoom';
+import ProfileScreen from '../screens/Profile'
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -17,6 +18,7 @@ export type RootStackParamList = {
   VerifyOTP: { email?: string } | undefined;
   ResetPassword: { email?: string } | undefined;
   Main: undefined;
+  UserProfile: undefined;
   ChatRoom: { friendId: string; friendName?: string };
 };
 
@@ -45,6 +47,7 @@ const RootNavigator = () => {
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <Stack.Screen name="UserProfile" component= {ProfileScreen} />
         </>
       )}
     </Stack.Navigator>
