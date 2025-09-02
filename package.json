@@ -88,13 +88,13 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(jest-)?react-native|@react-native|react-clone-referenced-element|expo(nent)?|@expo(nent)?/.*|react-navigation|@react-navigation/.*|sentry-expo|native-base|@sentry/.*|@react-native-firebase|@react-native-community|expo-router|i18next|react-i18next|axios|react-native-reanimated|react-native-safe-area-context|react-native-screens|react-native-webview|@expo-google-fonts/.*|unimodules-*|@unimodules/.*)"
     ],
-   "collectCoverage": true,
-  "collectCoverageFrom": [
-    "**/*.{ts,tsx,js,jsx}",
-    "!**/coverage/**",
-    "!**/node_modules/**",
-    "!**/babel.config.js"
-  ],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "**/*.{ts,tsx,js,jsx}",
+      "!**/coverage/**",
+      "!**/node_modules/**",
+      "!**/babel.config.js"
+    ],
     "moduleFileExtensions": [
       "ts",
       "tsx",
