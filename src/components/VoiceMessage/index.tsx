@@ -1,4 +1,5 @@
 // VoiceMessage.tsx
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, PermissionsAndroid, Platform } from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -7,6 +8,16 @@ const audioRecorderPlayer = new AudioRecorderPlayer();
 
 interface VoiceMessageProps {
   onSend?: (uri: string, duration: number) => void; // callback when recording finishes
+=======
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+
+const audioRecorderPlayer = AudioRecorderPlayer; // ✅ no "new"
+
+interface VoiceMessageProps {
+  onSend?: (uri: string) => void; // callback when recording finishes
+>>>>>>> bug-fixBranch
 }
 
 const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
@@ -16,6 +27,7 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
   const [playTime, setPlayTime] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
   const [filePath, setFilePath] = useState<string | null>(null);
+<<<<<<< HEAD
   const [hasPermission, setHasPermission] = useState(false);
 
   // Request microphone permission
@@ -62,15 +74,20 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
       }
     };
   }, []);
+=======
+>>>>>>> bug-fixBranch
 
   // 🎙️ Start recording
   const startRecording = async () => {
     try {
+<<<<<<< HEAD
       if (!hasPermission) {
         const permissionGranted = await requestPermission();
         if (!permissionGranted) return;
       }
 
+=======
+>>>>>>> bug-fixBranch
       const uri = await audioRecorderPlayer.startRecorder();
       audioRecorderPlayer.addRecordBackListener((e) => {
         setRecordTime(audioRecorderPlayer.mmssss(Math.floor(e.currentPosition)));
@@ -79,7 +96,10 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
       setIsRecording(true);
     } catch (err) {
       console.error('Recording error:', err);
+<<<<<<< HEAD
       Alert.alert('Recording Error', 'Failed to start recording. Please try again.');
+=======
+>>>>>>> bug-fixBranch
     }
   };
 
@@ -90,6 +110,7 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
       audioRecorderPlayer.removeRecordBackListener();
       setIsRecording(false);
       setFilePath(result);
+<<<<<<< HEAD
       
       // Calculate duration in seconds
       const timeParts = recordTime.split(':');
@@ -101,12 +122,18 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
     } catch (err) {
       console.error('Stop error:', err);
       Alert.alert('Recording Error', 'Failed to stop recording.');
+=======
+      if (onSend) onSend(result);
+    } catch (err) {
+      console.error('Stop error:', err);
+>>>>>>> bug-fixBranch
     }
   };
 
   // ▶️ Play recording
   const startPlay = async () => {
     if (!filePath) return;
+<<<<<<< HEAD
     try {
       await audioRecorderPlayer.startPlayer(filePath);
       audioRecorderPlayer.addPlayBackListener((e) => {
@@ -120,10 +147,21 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
       console.error('Play error:', err);
       Alert.alert('Playback Error', 'Failed to play recording.');
     }
+=======
+    await audioRecorderPlayer.startPlayer(filePath);
+    audioRecorderPlayer.addPlayBackListener((e) => {
+      setPlayTime(audioRecorderPlayer.mmssss(Math.floor(e.currentPosition)));
+      setDuration(audioRecorderPlayer.mmssss(Math.floor(e.duration)));
+      if (e.currentPosition >= e.duration) stopPlay();
+      return;
+    });
+    setIsPlaying(true);
+>>>>>>> bug-fixBranch
   };
 
   // ⏸️ Stop playing
   const stopPlay = async () => {
+<<<<<<< HEAD
     try {
       await audioRecorderPlayer.stopPlayer();
       audioRecorderPlayer.removePlayBackListener();
@@ -131,24 +169,37 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
     } catch (err) {
       console.error('Stop play error:', err);
     }
+=======
+    await audioRecorderPlayer.stopPlayer();
+    audioRecorderPlayer.removePlayBackListener();
+    setIsPlaying(false);
+>>>>>>> bug-fixBranch
   };
 
   // ⏩ Forward
   const seekForward = async () => {
+<<<<<<< HEAD
     try {
       await audioRecorderPlayer.seekToPlayer(5000); // jump +5s
     } catch (err) {
       console.error('Seek forward error:', err);
     }
+=======
+    await audioRecorderPlayer.seekToPlayer(5000); // jump +5s
+>>>>>>> bug-fixBranch
   };
 
   // ⏪ Backward
   const seekBackward = async () => {
+<<<<<<< HEAD
     try {
       await audioRecorderPlayer.seekToPlayer(-5000); // jump -5s
     } catch (err) {
       console.error('Seek backward error:', err);
     }
+=======
+    await audioRecorderPlayer.seekToPlayer(-5000); // jump -5s
+>>>>>>> bug-fixBranch
   };
 
   return (
