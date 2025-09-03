@@ -239,42 +239,7 @@ export const listenToChatList = (
 
   let unsubscribes: (() => void)[] = [];
 
-//   // 1. Listen to my friends
-//   const unsubFriends = listenToFriends(friendIds => {
-//     // Clear old listeners
-//     unsubscribes.forEach(unsub => unsub());
-//     unsubscribes = [];
 
-//     const chats: Record<string, ChatItem> = {};
-
-//     friendIds.forEach(friendId => {
-//       const unsubChat = listenToChatForFriend(friendId, chatItem => {
-//         console.log("Chat Item kya hai", chatItem)
-//         if (chatItem) {
-//           chats[friendId] = chatItem;
-//           // Sort by lastMessage timestamp
-//           const sorted = Object.values(chats).sort((a, b) => {
-//             const t1 = a.lastMessage?.timestamp?.toMillis?.() || 0;
-//             const t2 = b.lastMessage?.timestamp?.toMillis?.() || 0;
-//             return t2 - t1;
-//           });
-//           onData(sorted);
-//         }
-//       });
-
-//       unsubscribes.push(unsubChat as any);
-//     });
-//   });
-
-//   return () => {
-//     try {
-//       unsubFriends();
-//       unsubscribes.forEach(unsub => unsub());
-//     } catch (err: any) {
-//       if (onError) onError(err);
-//     }
-//   };
-// };
 
 
 const unsubFriends = listenToFriends(friendIds => {
@@ -341,7 +306,6 @@ export interface MediaItem {
 
 // Message interface for better typing
 export interface Message {
-  [x: string]: MediaItem[] | undefined;
   id?: string;
   text: string;
   senderId: string;

@@ -1,132 +1,156 @@
-// import React from "react";
-// import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-// import Modal from "react-native-modal";
-// import { launchImageLibrary } from "react-native-image-picker";
-// import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-// // import DocumentPicker from "react-native-document-picker";
-
-// type Props = {
-//   visible: boolean;
-//   onClose: () => void;
-//   onResult: (result: any) => void;
-// };
-
-// const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
-//   // Pick Image / Video
-// const pickMedia = async () => {
-//   try {
-//     const res = await launchImageLibrary({
-//       mediaType: "mixed", // 'photo' | 'video' | 'mixed'
-//       selectionLimit: 0,  // 0 = unlimited on Android, up to 10 on iOS
-//     });
-
-//     if (!res.didCancel && res.assets) {
-//       // return all selected assets
-//       onResult(res.assets);
-//     }
-//   } catch (e) {
-//     console.log("Media pick error:", e);
-//   } finally {
-//     onClose();
-//   }
-// };
-
-//   // Pick File
-//   // const pickFile = async () => {
-//   //   try {
-//   //     const res = await DocumentPicker.pick({
-//   //       type: [DocumentPicker.types.allFiles],
-//   //     });
-//   //     onResult(res[0]);
-//   //   } catch (err) {
-//   //     if (!DocumentPicker.isCancel(err)) console.log(err);
-//   //   } finally {
-//   //     onClose();
-//   //   }
-//   // };
-
-//   return (
-//     <Modal
-//       isVisible={visible}
-//       onBackdropPress={onClose}
-//       style={styles.modal}
-//     >
-//       <View style={styles.sheet}>
-//         <View style={styles.header}>
-//           <Text style={styles.title}>Select an Option</Text>
-//         </View>
-
-//         <TouchableOpacity style={styles.option} onPress={pickMedia}>
-//           <Icon name="image-multiple-outline" size={22} color="#4A90E2" />
-//           <Text style={styles.optionText}>Pick Image / Video</Text>
-//         </TouchableOpacity>
-
-//         {/* <TouchableOpacity style={styles.option} onPress={pickFile}>
-//           <Icon name="file-outline" size={22} color="#50C878" />
-//           <Text style={styles.optionText}>Pick File</Text>
-//         </TouchableOpacity> */}
-
-//         <TouchableOpacity
-//           style={[styles.option, styles.cancel]}
-//           onPress={onClose}
-//         >
-//           <Icon name="close-circle-outline" size={22} color="#E94E4E" />
-//           <Text style={[styles.optionText, { color: "#E94E4E" }]}>Cancel</Text>
-//         </TouchableOpacity>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   modal: {
-//     justifyContent: "flex-end",
-//     margin: 0,
-//   },
-//   sheet: {
-//     backgroundColor: "#fff",
-//     paddingVertical: 16,
-//     paddingHorizontal: 20,
-//     borderTopLeftRadius: 20,
-//     borderTopRightRadius: 20,
-//     shadowColor: "#000",
-//     shadowOffset: { width: 0, height: -3 },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 5,
-//   },
-//   header: {
-//     alignItems: "center",
-//     marginBottom: 12,
-//   },
-//   title: {
-//     fontSize: 18,
-//     fontWeight: "600",
-//     color: "#333",
-//   },
-//   option: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     paddingVertical: 14,
-//     borderBottomWidth: 1,
-//     borderColor: "#eee",
-//   },
-//   optionText: {
-//     fontSize: 16,
-//     marginLeft: 12,
-//     color: "#333",
-//   },
-//   cancel: {
-//     borderBottomWidth: 0,
-//     marginTop: 8,
-//   },
-// });
-
-// export default PickerBottomSheet;
-
-
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, PermissionsAndroid, Platform } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  PermissionsAndroid,
+  Platform,
+  Alert,
+} from "react-native";
+import Modal from "react-native-modal";
+import { launchImageLibrary, launchCamera, Asset } from "react-native-image-picker";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  onResult: (result: Asset[]) => void;
+};
+
+const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
+  /**
+   * Request gallery permission for Android
+   */
+  const requestGalleryPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== "android") return true;
+
+    try {
+      if (Platform.Version >= 33) {
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+        ]);
+
+        return (
+          result[PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES] ===
+            PermissionsAndroid.RESULTS.GRANTED ||
+          result[PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO] ===
+            PermissionsAndroid.RESULTS.GRANTED
+        );
+      } else {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+        );
+        return result === PermissionsAndroid.RESULTS.GRANTED;
+      }
+    } catch (err) {
+      console.warn("Gallery permission error:", err);
+      return false;
+    }
+  };
+
+  /**
+   * Request camera permission for Android
+   */
+  const requestCameraPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== "android") return true;
+
+    try {
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA
+      );
+      return result === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn("Camera permission error:", err);
+      return false;
+    }
+  };
+
+  /**
+   * Pick images or videos from gallery
+   */
+  const pickMedia = async () => {
+    try {
+      const hasPermission = await requestGalleryPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow gallery access to select media."
+        );
+        return;
+      }
+
+      const res = await launchImageLibrary({
+        mediaType: "mixed",
+        selectionLimit: 0,
+        includeBase64: false,
+        quality: 0.8,
+      });
+
+      if (res.assets && res.assets.length > 0) {
+        onResult(res.assets);
+      } else if (res.didCancel) {
+        console.log("PickerBottomSheet: User cancelled gallery selection");
+      }
+    } catch (e) {
+      console.error("PickerBottomSheet: Media pick error:", e);
+      Alert.alert("Error", "Failed to pick media. Please try again.");
+    } finally {
+      onClose();
+    }
+  };
+
+  /**
+   * Take photo with camera
+   */
+  const takePhoto = async () => {
+    try {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow camera access to take a photo."
+        );
+        return;
+      }
+
+      const res = await launchCamera({
+        mediaType: "photo",
+        quality: 0.8,
+        includeBase64: false,
+        saveToPhotos: true,
+      });
+
+      if (res.assets && res.assets.length > 0) {
+        onResult(res.assets);
+      } else if (res.didCancel) {
+        console.log("PickerBottomSheet: User cancelled camera");
+      }
+    } catch (e) {
+      console.error("PickerBottomSheet: Camera error:", e);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
+    } finally {
+      onClose();
+    }
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal
+      isVisible={visible}
+      onBackdropPress={onClose}
+      onBackButtonPress={onClose}import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  PermissionsAndroid,
+  Platform,
+  Alert,
+} from "react-native";
 import Modal from "react-native-modal";
 import { launchImageLibrary, Asset } from "react-native-image-picker";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -138,54 +162,117 @@ type Props = {
 };
 
 const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
-  const requestGalleryPermission = async () => {
-    if (Platform.OS === "android") {
+  /**
+   * Request gallery permission for Android
+   */
+  const requestGalleryPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== "android") return true;
+
+    try {
       if (Platform.Version >= 33) {
-        await PermissionsAndroid.requestMultiple([
+        const result = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
           PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
         ]);
+
+        return (
+          result[PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES] ===
+            PermissionsAndroid.RESULTS.GRANTED ||
+          result[PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO] ===
+            PermissionsAndroid.RESULTS.GRANTED
+        );
       } else {
-        await PermissionsAndroid.request(
+        const result = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
         );
+        return result === PermissionsAndroid.RESULTS.GRANTED;
       }
+    } catch (err) {
+      console.warn("Permission error:", err);
+      return false;
     }
   };
 
+  /**
+   * Pick images or videos
+   */
   const pickMedia = async () => {
     try {
-      await requestGalleryPermission();
+      console.log("PickerBottomSheet: Starting media pick");
+      const hasPermission = await requestGalleryPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow gallery access to select media."
+        );
+        return;
+      }
 
       const res = await launchImageLibrary({
-        mediaType: "mixed",
-        selectionLimit: 0,
+        mediaType: "mixed", // allows both images & videos
+        selectionLimit: 0, // unlimited on Android, up to 10 on iOS
+        includeBase64: false,
+        quality: 0.8,
       });
 
-      if (!res.didCancel && res.assets) {
+      console.log("PickerBottomSheet: Media pick result:", res);
+
+      if (res.assets && res.assets.length > 0) {
+        console.log("PickerBottomSheet: Selected assets:", res.assets.length);
         onResult(res.assets);
+      } else if (res.didCancel) {
+        console.log("PickerBottomSheet: User cancelled");
       }
     } catch (e) {
-      console.log("Media pick error:", e);
+      console.error("PickerBottomSheet: Media pick error:", e);
+      Alert.alert("Error", "Failed to pick media. Please try again.");
     } finally {
       onClose();
     }
   };
 
+  console.log("PickerBottomSheet: Render with visible:", visible);
+
+  if (!visible) {
+    console.log("PickerBottomSheet: Not visible, not rendering");
+    return null;
+  }
+
+  console.log("PickerBottomSheet: Rendering modal");
+
   return (
-    <Modal isVisible={visible} onBackdropPress={onClose} style={styles.modal}>
+    <Modal 
+      isVisible={visible} 
+      onBackdropPress={onClose} 
+      onBackButtonPress={onClose}
+      style={styles.modal}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      animationInTiming={300}
+      animationOutTiming={300}
+    >
       <View style={styles.sheet}>
         <View style={styles.header}>
-          <Text style={styles.title}>Select an Option</Text>
+          <View style={styles.handle} />
+          <Text style={styles.title}>Select Media</Text>
         </View>
 
         <TouchableOpacity style={styles.option} onPress={pickMedia}>
-          <Icon name="image-multiple-outline" size={22} color="#4A90E2" />
+          <Icon name="image-multiple-outline" size={24} color="#4A90E2" />
           <Text style={styles.optionText}>Pick Image / Video</Text>
+          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.option} onPress={onClose}>
+          <Icon name="camera" size={24} color="#50C878" />
+          <Text style={styles.optionText}>Take Photo</Text>
+          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.option, styles.cancel]} onPress={onClose}>
-          <Icon name="close-circle-outline" size={22} color="#E94E4E" />
+          <Icon name="close-circle-outline" size={24} color="#E94E4E" />
           <Text style={[styles.optionText, { color: "#E94E4E" }]}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -194,26 +281,159 @@ const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
 };
 
 const styles = StyleSheet.create({
-  modal: { justifyContent: "flex-end", margin: 0 },
+  modal: { 
+    justifyContent: "flex-end", 
+    margin: 0,
+  },
   sheet: {
     backgroundColor: "#fff",
-    paddingVertical: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
     paddingHorizontal: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    elevation: 5,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  header: { alignItems: "center", marginBottom: 12 },
-  title: { fontSize: 18, fontWeight: "600", color: "#333" },
+  header: { 
+    alignItems: "center", 
+    marginBottom: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#ddd",
+    borderRadius: 2,
+    marginBottom: 8,
+  },
+  title: { 
+    fontSize: 18, 
+    fontWeight: "600", 
+    color: "#333" 
+  },
   option: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#f0f0f0",
   },
-  optionText: { fontSize: 16, marginLeft: 12, color: "#333" },
-  cancel: { borderBottomWidth: 0, marginTop: 8 },
+  optionText: { 
+    fontSize: 16, 
+    marginLeft: 12, 
+    color: "#333",
+    flex: 1,
+  },
+  arrow: {
+    marginLeft: 'auto',
+  },
+  cancel: { 
+    borderBottomWidth: 0, 
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    paddingTop: 20,
+  },
+});
+
+export default PickerBottomSheet;
+
+      style={styles.modal}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      animationInTiming={300}
+      animationOutTiming={300}
+    >
+      <View style={styles.sheet}>
+        <View style={styles.header}>
+          <View style={styles.handle} />
+          <Text style={styles.title}>Select Media</Text>
+        </View>
+
+        <TouchableOpacity style={styles.option} onPress={pickMedia}>
+          <Icon name="image-multiple-outline" size={24} color="#4A90E2" />
+          <Text style={styles.optionText}>Pick Image / Video</Text>
+          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.option} onPress={takePhoto}>
+          <Icon name="camera" size={24} color="#50C878" />
+          <Text style={styles.optionText}>Take Photo</Text>
+          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.option, styles.cancel]} onPress={onClose}>
+          <Icon name="close-circle-outline" size={24} color="#E94E4E" />
+          <Text style={[styles.optionText, { color: "#E94E4E" }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  modal: {
+    justifyContent: "flex-end",
+    margin: 0,
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    paddingTop: 8,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#ddd",
+    borderRadius: 2,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginLeft: 12,
+    color: "#333",
+    flex: 1,
+  },
+  arrow: {
+    marginLeft: "auto",
+  },
+  cancel: {
+    borderBottomWidth: 0,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    paddingTop: 20,
+  },
 });
 
 export default PickerBottomSheet;
