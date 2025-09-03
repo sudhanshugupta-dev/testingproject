@@ -83,7 +83,7 @@ const SignupContainer = () => {
         label={t('auth.confirmPassword')}
         value={confirm}
         onChangeText={setConfirm}
-        placeholder={t('auth.placeholders.confirmPassword')}
+        placeholder={t('auth.placeholders.password')}
         secureTextEntry
       />
       <CustomButton

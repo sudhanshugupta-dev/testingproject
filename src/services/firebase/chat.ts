@@ -434,11 +434,18 @@ export const sendMessage = async (
     media?: { uri: string; type: string }[];
   },
 ): Promise<void> => {
+  
   try {
+   
     const userId = auth().currentUser?.uid;
     if (!userId) throw new Error("User not authenticated");
-    if (message.senderId !== userId)
-      throw new Error("Sender ID does not match authenticated user");
+    // If senderId doesn't match logged-in user, fix it instead of failing hard
+    if (message.senderId !== userId) {
+      console.warn(
+        "sendMessage: senderId does not match authenticated user. Overriding.",
+        { provided: message.senderId, authed: userId }
+      );
+    }
 
     console.log("Sending message to room:", roomId, message, ":sf", userId);
 
@@ -468,11 +475,12 @@ export const sendMessage = async (
 
     const messageData: Message = {
       text: message.text,
-      senderId: message.senderId,
+      senderId: userId,
+      receiverId,
       createdAt: serverTimestamp,
       messageType,
       status: "sent",
-      isSeen: "false",
+      isSeen: false,
       media: message.media || [],
       seenBy: {
         [userId]: true, // sender auto sees own
@@ -486,10 +494,14 @@ export const sendMessage = async (
     batch.set(messageRef, messageData);
 
     // Update lastMessage in room
-    batch.update(roomRef, {
-      lastMessage: lastMessagePreview,
-      lastMessageAt: serverTimestamp,
-    });
+    batch.set(
+      roomRef,
+      {
+        lastMessage: lastMessagePreview,
+        lastMessageAt: serverTimestamp,
+      },
+      { merge: true }
+    );
 
     // Update chats collection for all participants
     const chatDocs = await firestore()
@@ -516,6 +528,8 @@ export const sendMessage = async (
       code: error.code,
       stack: error.stack,
     });
+    console.log(roomId , "roomId");
+    console.log("message", message)
     throw new Error(
       `Failed to send message: ${error.message} (Code: ${
         error.code || "unknown"
