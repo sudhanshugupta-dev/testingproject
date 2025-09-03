@@ -11,9 +11,10 @@ type Props = {
   secureTextEntry?: boolean; 
   style?: ViewStyle;
   error?: string;
+  testID?: string;
 };
 
-const CustomTextInput = ({ label, value, onChangeText, placeholder, secureTextEntry, style, error }: Props) => {
+const CustomTextInput = ({ label, value, onChangeText, placeholder, secureTextEntry, style, error, testID }: Props) => {
   const [secured, setSecured] = useState(!!secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
   const { colors, fonts } = useAppTheme();
@@ -61,7 +62,7 @@ const CustomTextInput = ({ label, value, onChangeText, placeholder, secureTextEn
   });
 
   return (
-    <View style={[styles.container, style]}>
+    <View testID={testID ? `${testID}-container` : "text-input-container"} style={[styles.container, style]}>
       {label && (
         <Animated.Text 
           style={[
@@ -91,6 +92,7 @@ const CustomTextInput = ({ label, value, onChangeText, placeholder, secureTextEn
         ]}
       >
         <TextInput 
+          testID={testID || "text-input"}
           style={[
             styles.input, 
             { 
@@ -108,7 +110,7 @@ const CustomTextInput = ({ label, value, onChangeText, placeholder, secureTextEn
           selectionColor={colors.primary}
         />
         {secureTextEntry && (
-          <Pressable onPress={() => setSecured(!secured)} style={styles.eyeButton}>
+          <Pressable testID="eye-button" onPress={() => setSecured(!secured)} style={styles.eyeButton}>
             <Ionicons 
               name={secured ? 'eye-off-outline' : 'eye-outline'} 
               size={22} 

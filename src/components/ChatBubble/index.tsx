@@ -224,6 +224,7 @@ interface ChatBubbleProps {
   };
   onLongPress?: () => void;
   currentUserId?: string;
+  testID?: string;
 }
 
 const formatTime = (timestamp?: number): string => {
@@ -240,6 +241,7 @@ const ChatBubble = ({
   replyTo,
   onLongPress,
   currentUserId,
+  testID,
 }: ChatBubbleProps) => {
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -329,6 +331,7 @@ const ChatBubble = ({
   return (
     <>
       <View
+        testID={testID || "chat-bubble"}
         style={[
           styles.messageRow,
           isMine ? styles.myMessageRow : styles.theirMessageRow,

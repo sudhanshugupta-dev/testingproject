@@ -16,9 +16,10 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onResult: (result: Asset[]) => void;
+  testID?: string;
 };
 
-const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
+const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult, testID }) => {
   /**
    * Request gallery permission for Android
    */
@@ -139,6 +140,7 @@ const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult }) => {
 
   return (
     <Modal
+      testID={testID || "picker-modal"}
       isVisible={visible}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
