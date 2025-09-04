@@ -39,6 +39,9 @@ import {
   GestureHandlerRootView,
   Swipeable,
 } from "react-native-gesture-handler";
+import VoiceMessage from "../../components/VoiceMessage";
+
+
 
 const ACTION_WIDTH = 80;
 const getCacheKey = (roomId: string) => `chat_messages_${roomId}`;
@@ -92,6 +95,7 @@ const ChatRoomContainer = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -220,61 +224,106 @@ const ChatRoomContainer = () => {
     return unsubscribe;
   }, [roomId, saveMessagesToCache]);
 
-  // Send message
-  const onSend = useCallback(async () => {
-  if (!text.trim() && selectedFiles.length === 0) return;
-  if (!roomId) {
-    Alert.alert("Error", "Chat room not ready. Please try again.");
-    return;
-  }
-  if (!myId) {
-    Alert.alert("Error", "User not authenticated. Please log in again.");
-    return;
-  }
-
-  try {
-    let uploadedUrls: string[] = [];
-    if (selectedFiles.length > 0) {
-      const files = selectedFiles.map((file) => ({
-        uri: file.uri,
-        type: file.type,
-        fileName: file.fileName || `file_${Date.now()}`,
-      }));
-      uploadedUrls = await uploadMultipleToCloudinary(files);
+  // Handle voice send
+  const handleVoiceSend = async (uri: string) => {
+    if (!roomId || !myId) {
+      Alert.alert("Error", "Chat room not ready or user not authenticated.");
+      setIsVoiceMode(false);
+      return;
     }
 
-    const payload: any = {
-      text: text.trim(),
-      senderId: myId,
-      receiverId: friendId,
-      createdAt: Date.now(),
-      ...(uploadedUrls.length > 0 && {
-        media: uploadedUrls.map((url, i) => ({ uri: url, type: selectedFiles[i].type })),
-      }),
-      ...(replyingTo && {
-        replyTo: {
+    try {
+      const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
+      const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
+      const files = [{ uri, type, fileName }];
+      console.log("check it audio path ", uri)
+      const uploadedUrls = await uploadMultipleToCloudinary(files);
+
+      const payload: any = {
+        text: '',
+        senderId: myId,
+        receiverId: friendId,
+        createdAt: Date.now(),
+        media: uploadedUrls.map((url) => ({ uri: url, type: 'audio' })),
+      };
+
+      if (replyingTo) {
+        payload.replyTo = {
           messageId: replyingTo.id || "",
           text: replyingTo.text,
           senderId: replyingTo.senderId,
           senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
-        },
-      }),
-    };
-
-    if (replyingTo) {
-      await sendReplyMessage(roomId, payload);
-    } else {
-      console.log(roomId , "correct", payload)
-      await sendMessage(roomId, payload);
+        };
+        await sendReplyMessage(roomId, payload);
+        setReplyingTo(null);
+      } else {
+        await sendMessage(roomId, payload);
+      }
+    } catch (err: any) {
+      Alert.alert("Error", `Failed to send voice message: ${err.message}`);
+    } finally {
+      setIsVoiceMode(false);
     }
-  } catch (err) {
-    Alert.alert("Error", `Failed to send message: ${err.message}`);
-  } finally {
-    setText("");
-    setSelectedFiles([]);
-    setReplyingTo(null);
-  }
-}, [text, selectedFiles, replyingTo, myId, myName, friendId, friendName, roomId]);
+  };
+
+  // Send message
+  const onSend = useCallback(async () => {
+    if (!roomId || !myId) {
+      Alert.alert("Error", "Chat room not ready or user not authenticated.");
+      return;
+    }
+
+    const hasTextOrFiles = text.trim() || selectedFiles.length > 0;
+    if (!hasTextOrFiles && !isVoiceMode) {
+      setIsVoiceMode(true);
+      return;
+    }
+
+    if (!hasTextOrFiles) return;
+
+    try {
+      let uploadedUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const files = selectedFiles.map((file) => ({
+          uri: file.uri,
+          type: file.type,
+          fileName: file.fileName || `file_${Date.now()}`,
+        }));
+        uploadedUrls = await uploadMultipleToCloudinary(files);
+      }
+
+      const payload: any = {
+        text: text.trim(),
+        senderId: myId,
+        receiverId: friendId,
+        createdAt: Date.now(),
+        ...(uploadedUrls.length > 0 && {
+          media: uploadedUrls.map((url, i) => ({ uri: url, type: selectedFiles[i].type })),
+        }),
+        ...(replyingTo && {
+          replyTo: {
+            messageId: replyingTo.id || "",
+            text: replyingTo.text,
+            senderId: replyingTo.senderId,
+            senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+          },
+        }),
+      };
+
+      if (replyingTo) {
+        await sendReplyMessage(roomId, payload);
+      } else {
+        console.log(roomId , "correct", payload)
+        await sendMessage(roomId, payload);
+      }
+    } catch (err: any) {
+      Alert.alert("Error", `Failed to send message: ${err.message}`);
+    } finally {
+      setText("");
+      setSelectedFiles([]);
+      setReplyingTo(null);
+    }
+  }, [text, selectedFiles, replyingTo, myId, myName, friendId, friendName, roomId, isVoiceMode]);
 
   // Long press modal
   const handleLongPress = useCallback((msg: Message) => {
@@ -466,21 +515,28 @@ const ChatRoomContainer = () => {
               >
                 <Icon name="add-circle-outline" size={30} color={colors.primary} />
               </TouchableOpacity>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-                value={text}
-                onChangeText={setText}
-                placeholder={t("chat.typeMessage")}
-                placeholderTextColor="#999"
-                multiline
-              />
+              {isVoiceMode ? (
+                <VoiceMessage
+                  onSend={handleVoiceSend}
+                  onCancel={() => setIsVoiceMode(false)}
+                />
+              ) : (
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
+                  value={text}
+                  onChangeText={setText}
+                  placeholder={t("chat.typeMessage")}
+                  placeholderTextColor="#999"
+                  multiline
+                />
+              )}
               <TouchableOpacity
                 style={[
                   styles.sendBtn,
-                  { backgroundColor: showSend ? colors.primary : colors.text + "33" },
+                  { backgroundColor: (showSend || isVoiceMode) ? colors.primary : colors.text + "33" },
                 ]}
                 onPress={onSend}
-                disabled={!showSend}
+                disabled={false}
               >
                 <Icon name={showSend ? "send" : "mic"} size={24} color="#fff" />
               </TouchableOpacity>

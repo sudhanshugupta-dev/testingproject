@@ -7,7 +7,7 @@ import {
 } from '../../services/firebase/auth';
 
 type AuthState = {
-  user: { uid: string; email?: string | null } | null;
+  user: { uid: string; email?: string | null; name:string} | null;
   token: string | null;
   loading: boolean;
   error?: string | null;
@@ -29,13 +29,14 @@ export const loginWithEmail = createAsyncThunk(
     try {
       console.log(email, password)
       const cred = await signInWithEmail(email, password);
+      console.log(cred, "correct it");
       const token = await cred.user.getIdToken();
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem(
         'user',
-        JSON.stringify({ uid: cred.user.uid, email: cred.user.email }),
+        JSON.stringify({ uid: cred.user.uid, email: cred.user.email, name: cred.user.name }),
       );
-      return { token, user: { uid: cred.user.uid, email: cred.user.email } };
+      return { token, user: { uid: cred.user.uid, email: cred.user.email, name: cred.user.name  } };
     } catch (e: any) {
       return rejectWithValue(e?.message || 'Login failed');
     }
@@ -48,16 +49,16 @@ export const signupWithEmail = createAsyncThunk(
     { email, password }: { email: string; password: string },
     { rejectWithValue },
   ) => {
-    console.log(email, password, 'dcds');
+   
     try {
       const cred = await signUpWithEmail(email, password);
       const token = await cred.user.getIdToken();
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem(
         'user',
-        JSON.stringify({ uid: cred.user.uid, email: cred.user.email }),
+        JSON.stringify({ uid: cred.user.uid, email: cred.user.email , name: cred.user.name}),
       );
-      return { token, user: { uid: cred.user.uid, email: cred.user.email } };
+      return { token, user: { uid: cred.user.uid, email: cred.user.email, name: cred.user.name } };
     } catch (e: any) {
       return rejectWithValue(e?.message || 'Signup failed');
     }
