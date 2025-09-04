@@ -23,6 +23,8 @@ import {
   sendReplyMessage,
   getOrCreateChatRoom,
   markMessagesAsRead,
+  deleteMessage,
+  pinMessage,
   Message,
 } from "../../services/firebase/chat";
 import ChatBubble from "../../components/ChatBubble";
@@ -34,6 +36,7 @@ import { useAppTheme } from "../../themes/useTheme";
 import { useTranslation } from "react-i18next";
 import Icon from "react-native-vector-icons/Ionicons";
 import PickerBottomSheet from "../../components/PickerBottomSheet";
+import FriendSelectionBottomSheet from "../../components/FriendSelectionBottomSheet";
 import { uploadMultipleToCloudinary } from "../../services/firebase/cloudinaryService";
 import {
   GestureHandlerRootView,
@@ -96,6 +99,8 @@ const ChatRoomContainer = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [forwardBottomSheetVisible, setForwardBottomSheetVisible] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<Message | null>(null);
 
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -329,6 +334,54 @@ const ChatRoomContainer = () => {
     setModalVisible(true);
   }, []);
 
+  // Handle forward message
+  const handleForward = useCallback((message: Message) => {
+    setMessageToForward(message);
+    setModalVisible(false);
+    setForwardBottomSheetVisible(true);
+  }, []);
+
+  // Handle pin message
+  const handlePin = useCallback(async (message: Message) => {
+    if (!roomId || !myId) return;
+    
+    try {
+      await pinMessage(roomId, message.id!, myId);
+      Alert.alert('Success', 'Message pinned successfully');
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to pin message: ${error.message}`);
+    } finally {
+      setModalVisible(false);
+    }
+  }, [roomId, myId]);
+
+  // Handle delete message
+  const handleDelete = useCallback(async (message: Message) => {
+    if (!roomId || !myId) return;
+    
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMessage(roomId, message.id!, myId);
+              Alert.alert('Success', 'Message deleted successfully');
+            } catch (error: any) {
+              Alert.alert('Error', `Failed to delete message: ${error.message}`);
+            } finally {
+              setModalVisible(false);
+            }
+          }
+        }
+      ]
+    );
+  }, [roomId, myId]);
+
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
@@ -561,20 +614,14 @@ const ChatRoomContainer = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => {
-                  setModalVisible(false);
-                  Alert.alert("Forward", "Forward functionality would open contact picker");
-                }}
+                onPress={() => selectedMessage && handleForward(selectedMessage)}
               >
                 <Icon name="arrow-redo" size={22} color={colors.primary} />
                 <Text style={[styles.modalText, { color: colors.text }]}>Forward</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalItem}
-                onPress={() => {
-                  setModalVisible(false);
-                  Alert.alert("Pin", "Pin functionality would pin this message");
-                }}
+                onPress={() => selectedMessage && handlePin(selectedMessage)}
               >
                 <Icon name="pin" size={22} color={colors.primary} />
                 <Text style={[styles.modalText, { color: colors.text }]}>Pin</Text>
@@ -582,10 +629,7 @@ const ChatRoomContainer = () => {
               {selectedMessage?.senderId === myId && (
                 <TouchableOpacity
                   style={styles.modalItem}
-                  onPress={() => {
-                    setModalVisible(false);
-                    Alert.alert("Delete", "Delete functionality would delete this message");
-                  }}
+                  onPress={() => selectedMessage && handleDelete(selectedMessage)}
                 >
                   <Icon name="trash" size={22} color="red" />
                   <Text style={[styles.modalText, { color: "red" }]}>Delete</Text>
@@ -601,6 +645,21 @@ const ChatRoomContainer = () => {
             </View>
           </View>
         </Modal>
+
+        {/* Friend Selection Bottom Sheet for Forwarding */}
+        <FriendSelectionBottomSheet
+          visible={forwardBottomSheetVisible}
+          onClose={() => {
+            setForwardBottomSheetVisible(false);
+            setMessageToForward(null);
+          }}
+          messageToForward={messageToForward}
+          onForwardComplete={(selectedFriends) => {
+            console.log('Message forwarded to:', selectedFriends);
+            setForwardBottomSheetVisible(false);
+            setMessageToForward(null);
+          }}
+        />
       </KeyboardAvoidingView>
     </GestureHandlerRootView>
   );
