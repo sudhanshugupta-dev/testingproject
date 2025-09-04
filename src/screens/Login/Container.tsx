@@ -155,9 +155,10 @@ const LoginContainer = () => {
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem(
         'user',
-        JSON.stringify({ uid: result.user.uid, email: result.user.email })
+        JSON.stringify({ uid: result.user.uid, email: result.user.email, name: result.user.displayName })
       );
-      dispatch(restoreAuth({ token, user: { uid: result.user.uid, email: result.user.email } }));
+      dispatch(restoreAuth({ token, user: { uid: result.user.uid, email: result.user.email,  name: result.user.displayName
+} }));
       nav.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
