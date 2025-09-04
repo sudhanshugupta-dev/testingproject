@@ -724,6 +724,196 @@ export const markMessagesAsRead = async (
   }
 };
 
+// Delete a message
+export const deleteMessage = async (
+  roomId: string,
+  messageId: string,
+  userId: string
+): Promise<void> => {
+  try {
+    const messageRef = firestore()
+      .collection('rooms')
+      .doc(roomId)
+      .collection('messages')
+      .doc(messageId);
+
+    const messageDoc = await messageRef.get();
+    if (!messageDoc.exists) {
+      throw new Error('Message not found');
+    }
+
+    const messageData = messageDoc.data() as Message;
+    
+    // Check if user is the sender
+    if (messageData.senderId !== userId) {
+      throw new Error('You can only delete your own messages');
+    }
+
+    // Update message as deleted
+    await messageRef.update({
+      deleted: true,
+      deletedAt: firestore.FieldValue.serverTimestamp(),
+      deletedBy: userId,
+      text: 'This message was deleted'
+    });
+
+    console.log('Message deleted successfully:', messageId);
+  } catch (error: any) {
+    console.error('Error deleting message:', error);
+    throw error;
+  }
+};
+
+// Pin a message
+export const pinMessage = async (
+  roomId: string,
+  messageId: string,
+  userId: string
+): Promise<void> => {
+  try {
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const messageRef = roomRef.collection('messages').doc(messageId);
+
+    const messageDoc = await messageRef.get();
+    if (!messageDoc.exists) {
+      throw new Error('Message not found');
+    }
+
+    // Add to pinned messages in room
+    await roomRef.update({
+      pinnedMessages: firestore.FieldValue.arrayUnion({
+        messageId,
+        pinnedBy: userId,
+        pinnedAt: firestore.FieldValue.serverTimestamp(),
+        text: messageDoc.data()?.text || '',
+        senderId: messageDoc.data()?.senderId || ''
+      })
+    });
+
+    console.log('Message pinned successfully:', messageId);
+  } catch (error: any) {
+    console.error('Error pinning message:', error);
+    throw error;
+  }
+};
+
+// Forward a message to multiple friends
+export const forwardMessage = async (
+  originalMessage: Message,
+  friendIds: string[],
+  currentUserId: string
+): Promise<void> => {
+  try {
+    const batch = firestore().batch();
+    const serverTimestamp = firestore.FieldValue.serverTimestamp();
+
+    for (const friendId of friendIds) {
+      // Get or create room for each friend
+      const roomId = generateRoomId(currentUserId, friendId);
+      const roomRef = firestore().collection('rooms').doc(roomId);
+      const messageRef = roomRef.collection('messages').doc();
+
+      // Create forwarded message
+      const forwardedMessage: Message = {
+        text: originalMessage.text,
+        senderId: currentUserId,
+        receiverId: friendId,
+        createdAt: serverTimestamp,
+        messageType: originalMessage.messageType || 'text',
+        status: 'sent',
+        media: originalMessage.media || [],
+        isSeen: false,
+        seenBy: {
+          [currentUserId]: true,
+          [friendId]: false
+        },
+        forwardedFrom: {
+          messageId: originalMessage.id || '',
+          roomId: originalMessage.id?.split('_')[0] || '', // Extract original room from message context
+          originalSenderId: originalMessage.senderId,
+          forwardedAt: serverTimestamp
+        }
+      };
+
+      batch.set(messageRef, forwardedMessage);
+
+      // Update room's last message
+      const lastMessageText = originalMessage.text || 
+        (originalMessage.messageType === 'image' ? '📷 Forwarded Image' :
+         originalMessage.messageType === 'video' ? '🎥 Forwarded Video' : 
+         '📄 Forwarded Message');
+
+      batch.set(roomRef, {
+        participants: [currentUserId, friendId],
+        lastMessage: lastMessageText,
+        lastMessageAt: serverTimestamp,
+        createdAt: serverTimestamp
+      }, { merge: true });
+
+      // Update chats collection
+      const chatDocs = await firestore()
+        .collection('chats')
+        .where('roomId', '==', roomId)
+        .get();
+
+      chatDocs.forEach(doc => {
+        batch.update(doc.ref, {
+          lastMessage: lastMessageText,
+          lastMessageAt: serverTimestamp,
+          ...(doc.id.startsWith(currentUserId) ? {} : { 
+            unreadCount: firestore.FieldValue.increment(1) 
+          })
+        });
+      });
+    }
+
+    await batch.commit();
+    console.log('Message forwarded successfully to', friendIds.length, 'friends');
+  } catch (error: any) {
+    console.error('Error forwarding message:', error);
+    throw error;
+  }
+};
+
+// Get friends list for forwarding
+export const getFriendsList = async (userId: string): Promise<any[]> => {
+  try {
+    const friendsSnapshot = await firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('friends')
+      .get();
+
+    const friendIds = friendsSnapshot.docs.map(doc => doc.id);
+    
+    if (friendIds.length === 0) {
+      return [];
+    }
+
+    // Get friend details
+    const friendsDetails = await Promise.all(
+      friendIds.map(async (friendId) => {
+        const userDoc = await firestore().collection('users').doc(friendId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          return {
+            id: friendId,
+            name: userData?.name || userData?.email || 'Unknown',
+            email: userData?.email || '',
+            avatar: userData?.avatar || null
+          };
+        }
+        return null;
+      })
+    );
+
+    return friendsDetails.filter(friend => friend !== null);
+  } catch (error: any) {
+    console.error('Error getting friends list:', error);
+    throw error;
+  }
+};
+
 // Function to create mock messages for testing bidirectional chat
 export const createMockMessages = async (roomId: string, userId1: string, userId2: string): Promise<void> => {
   try {
@@ -737,35 +927,45 @@ export const createMockMessages = async (roomId: string, userId1: string, userId
         senderId: userId1,
         createdAt: serverTimestamp,
         messageType: 'text',
-        status: 'sent'
+        status: 'sent',
+        isSeen: false,
+        seenBy: {}
       },
       {
         text: "I'm doing great! Thanks for asking. How about you?",
         senderId: userId2,
         createdAt: serverTimestamp,
         messageType: 'text',
-        status: 'sent'
+        status: 'sent',
+        isSeen: false,
+        seenBy: {}
       },
       {
         text: "I'm good too! Just working on some React Native stuff.",
         senderId: userId1,
         createdAt: serverTimestamp,
         messageType: 'text',
-        status: 'sent'
+        status: 'sent',
+        isSeen: false,
+        seenBy: {}
       },
       {
         text: "That sounds interesting! What kind of app are you building?",
         senderId: userId2,
         createdAt: serverTimestamp,
         messageType: 'text',
-        status: 'sent'
+        status: 'sent',
+        isSeen: false,
+        seenBy: {}
       },
       {
         text: "It's a chat application with Firebase backend. Pretty cool so far!",
         senderId: userId1,
         createdAt: serverTimestamp,
         messageType: 'text',
-        status: 'sent'
+        status: 'sent',
+        isSeen: false,
+        seenBy: {}
       }
     ];
 

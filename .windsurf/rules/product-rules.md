@@ -1,0 +1,6 @@
+---
+trigger: manual
+description:
+globs:
+---
+
