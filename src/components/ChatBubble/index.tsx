@@ -205,6 +205,7 @@ import {
 import { useAppTheme } from "../../themes/useTheme";
 import { useTranslation } from "react-i18next";
 import Video from "react-native-video";
+import VoiceMessageBubble from "../VoiceMessageBubble";
 
 interface MediaItem {
   uri: string;
@@ -291,6 +292,7 @@ const ChatBubble = ({
           const mimeType = file?.type || "";
           const isImage = mimeType.startsWith("image");
           const isVideo = mimeType.startsWith("video");
+          const isAudio = mimeType.startsWith("audio") || file.type === "audio";
 
           if (isImage) {
             return (
@@ -304,7 +306,7 @@ const ChatBubble = ({
             );
           }
 
-          if (isVideo) {
+          if (isVideo && !isAudio) {
             return (
               <Pressable key={index} onPress={() => setPreviewMedia(file)}>
                 <Video
@@ -315,6 +317,16 @@ const ChatBubble = ({
                 />
                 <Text style={styles.videoLabel}>▶ Tap to Play</Text>
               </Pressable>
+            );
+          }
+
+          if (isAudio) {
+            return (
+              <VoiceMessageBubble
+                key={index}
+                audioUri={file.uri}
+                isMine={isMine}
+              />
             );
           }
 
@@ -340,6 +352,8 @@ const ChatBubble = ({
         <Pressable
           style={[
             styles.bubble,
+            // Don't apply background for voice messages as VoiceMessageBubble handles it
+            (media && media.length > 0 && media[0].type?.startsWith("audio")) ? {} :
             isMine
               ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 }
               : { backgroundColor: colors.card, borderBottomLeftRadius: 4 },
@@ -362,7 +376,7 @@ const ChatBubble = ({
 
           {renderMedia()}
 
-          {timestamp && (
+          {timestamp && !(media && media.length > 0 && media[0].type?.startsWith("audio")) && (
             <Text
               style={[
                 styles.timestamp,
