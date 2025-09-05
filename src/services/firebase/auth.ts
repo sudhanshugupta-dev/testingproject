@@ -197,7 +197,96 @@ export const signInWithGoogle = async (): Promise<any> => {
   }
 };
 
+// export const signInWithGoogle = async (): Promise<any> => {
+//   try {
+//     // Configure Google Sign-In
+//     GoogleSignin.configure({
+//       webClientId: '795608926313-e4mrkvn248a7fjpi077j1ilq0f80mak4.apps.googleusercontent.com', // Replace with your Firebase Web Client ID
+//       offlineAccess: true, // Enables serverAuthCode
+//       scopes: [
+//         'https://www.googleapis.com/auth/userinfo.profile',
+//         'https://www.googleapis.com/auth/userinfo.email',
+//         'https://www.googleapis.com/auth/calendar', // Add Calendar scope
+//       ],
+//     });
+
+//     // Check Google Play Services
+//     try {
+//       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+//       console.log('Play Services available');
+//     } catch (playError: any) {
+//       console.error('Play Services check failed:', playError);
+//       throw new Error(`Play Services error: ${playError.message} (Code: ${playError.code})`);
+//     }
+
+//     // Sign in with Google
+//     let userInfo;
+//     try {
+//       userInfo = await GoogleSignin.signIn();
+//       console.log('GoogleSignin.signIn result:', JSON.stringify(userInfo, null, 2));
+//     } catch (signInError: any) {
+//       console.error('GoogleSignin.signIn error:', signInError);
+//       if (signInError.code === statusCodes.SIGN_IN_CANCELLED) {
+//         throw new Error('User cancelled the sign-in process');
+//       } else if (signInError.code === statusCodes.IN_PROGRESS) {
+//         throw new Error('Sign-in operation already in progress');
+//       } else if (signInError.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+//         throw new Error('Google Play Services not available');
+//       }
+//       throw new Error(`Google sign-in failed: ${signInError.message} (Code: ${signInError.code})`);
+//     }
+
+//     // Extract idToken and serverAuthCode from userInfo.data
+//     const { idToken, serverAuthCode } = userInfo.data;
+//     if (!idToken) {
+//       throw new Error('Failed to retrieve Google ID token');
+//     }
+
+//     // Get access token for Google Calendar API
+//     let accessToken;
+//     try {
+//       const tokens = await GoogleSignin.getTokens();
+//       accessToken = tokens.accessToken;
+//       console.log('Access Token:', accessToken);
+//     } catch (tokenError: any) {
+//       console.error('Failed to retrieve access token:', tokenError);
+//       throw new Error(`Failed to retrieve access token: ${tokenError.message}`);
+//     }
+
+//     // Create Firebase credential
+//     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+//     // Sign in with Firebase
+//     const result = await auth().signInWithCredential(googleCredential);
+
+//     // Assuming waitForAuthState and addUserToFirestore are defined elsewhere
+//     const user = await waitForAuthState();
+//     await addUserToFirestore(user);
+
+//     console.log('Google sign-in successful:', user.uid);
+
+//     // Return user info and access token
+//     return {
+//       firebaseUser: result,
+//       accessToken, // Include access token for Google Calendar API
+//       serverAuthCode, // Optionally include serverAuthCode for server-side refresh
+//     };
+//   } catch (error: any) {
+//     console.error('Google sign-in error:', {
+//       message: error.message,
+//       code: error.code,
+//       stack: error.stack,
+//       details: error,
+//     });
+//     throw new Error(
+//       `Google sign-in failed: ${error.message} (Code: ${error.code || 'unknown'})`,
+//     );
+//   }
+// };
+
+
 // Send password reset email
+
 export const sendPasswordResetOTP = async (email: string): Promise<boolean> => {
   try {
     await auth().sendPasswordResetEmail(email);

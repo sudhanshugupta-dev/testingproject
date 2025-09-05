@@ -241,7 +241,7 @@ const ChatRoomContainer = () => {
       const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
       const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
       const files = [{ uri, type, fileName }];
-      console.log("check it audio path ", uri)
+      console.log("Uploading voice message from path:", uri)
       const uploadedUrls = await uploadMultipleToCloudinary(files);
 
       const payload: any = {
@@ -249,6 +249,7 @@ const ChatRoomContainer = () => {
         senderId: myId,
         receiverId: friendId,
         createdAt: Date.now(),
+        messageType: 'voice',
         media: uploadedUrls.map((url) => ({ uri: url, type: 'audio' })),
       };
 
