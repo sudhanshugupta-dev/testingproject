@@ -31,8 +31,8 @@
   "tabs": { "chat": "Chat", "requests": "Requests", "profile": "Profile" },
   "profile": { "logout": "Logout", "theme": "Theme", "language": "Language", "guest": "Guest User" },
   "language": { "select": "Select Language", "english": "English", "hindi": "Hindi", "spanish": "Spanish", "french": "French", "japanese": "Japanese" },
-  "chat": { 
-    "typeMessage": "Type a message", 
+  "chat": {
+    "typeMessage": "Type a message...",
     "send": "Send", 
     "online": "online", 
     "offline": "Offline",
@@ -46,6 +46,9 @@
     "cancel": "Cancel",
     "loadingMessages": "Loading messages...",
     "loadingMore": "Loading more messages...",
+    "selectGif": "Select GIF",
+    "selectSticker": "Select Sticker",
+    "searchGifs": "Search GIFs...",
     "error": {
       "invalidUserOrFriend": "Invalid user or friend ID",
       "failedToLoadChat": "Failed to load chat. Please try again.",

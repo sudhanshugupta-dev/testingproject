@@ -311,7 +311,7 @@ export interface Message {
   senderId: string;
   receiverId?: string;
   createdAt: any;
-  messageType?: 'text' | 'image' | 'video' | 'voice' | 'mixed';
+  messageType?: 'text' | 'image' | 'video' | 'voice' | 'mixed' | 'gif' | 'sticker' | 'audio' | 'file';
   status?: 'sending' | 'sent' | 'delivered' | 'read';
   media?: MediaItem[];
   voiceUri?: string;
@@ -431,6 +431,7 @@ export const sendMessage = async (
     senderId: string;
     createdAt: number;
     receiverId: string;
+    messageType?: string;
     media?: { uri: string; type: string }[];
   },
 ): Promise<void> => {
@@ -454,23 +455,33 @@ export const sendMessage = async (
     const serverTimestamp = firestore.FieldValue.serverTimestamp();
     const receiverId = message.receiverId;
 
-    // ✅ Determine message type
-    let messageType: "text" | "image" | "video" | "mixed" = "text";
-    if (message.media && message.media.length > 0) {
+    // ✅ Use messageType from Container or determine from media
+    let messageType: 'text' | 'image' | 'video' | 'voice' | 'mixed' | 'gif' | 'sticker' | 'audio' | 'file' = message.messageType as any || "text";
+    
+    // Only auto-detect if no messageType provided (backward compatibility)
+    if (!message.messageType && message.media && message.media.length > 0) {
       const hasImages = message.media.some(m => m.type.startsWith("image"));
       const hasVideos = message.media.some(m => m.type.startsWith("video"));
+      const hasGifs = message.media.some(m => m.type === "image/gif");
 
-      if (hasImages && hasVideos) messageType = "mixed";
+      if (hasGifs) messageType = "gif";
+      else if (hasImages && hasVideos) messageType = "mixed";
       else if (hasVideos) messageType = "video";
-      else messageType = "image";
+      else if (hasImages) messageType = "image";
     }
+    
+    console.log('Firebase API - messageType:', messageType);
 
     // ✅ Pick preview text for lastMessage
     let lastMessagePreview = message.text || "";
     if (!lastMessagePreview && messageType !== "text") {
-      if (messageType === "image") lastMessagePreview = "📷 Image";
+      if (messageType === "gif") lastMessagePreview = "🎭 GIF";
+      else if (messageType === "sticker") lastMessagePreview = "😊 Sticker";
+      else if (messageType === "voice" || messageType === "audio") lastMessagePreview = "🎤 Voice";
+      else if (messageType === "image") lastMessagePreview = "📷 Image";
       else if (messageType === "video") lastMessagePreview = "🎥 Video";
       else if (messageType === "mixed") lastMessagePreview = "📷🎥 Media";
+      else lastMessagePreview = "📎 File";
     }
 
     const messageData: Message = {

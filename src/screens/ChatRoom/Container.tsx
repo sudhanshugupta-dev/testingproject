@@ -38,6 +38,7 @@ import { useTranslation } from "react-i18next";
 import Icon from "react-native-vector-icons/Ionicons";
 import PickerBottomSheet from "../../components/PickerBottomSheet";
 import FriendSelectionBottomSheet from "../../components/FriendSelectionBottomSheet";
+import MediaPicker from "../../components/MediaPicker/MediaPicker";
 import { uploadMultipleToCloudinary } from "../../services/firebase/cloudinaryService";
 import {
   GestureHandlerRootView,
@@ -102,6 +103,7 @@ const ChatRoomContainer = () => {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [forwardBottomSheetVisible, setForwardBottomSheetVisible] = useState(false);
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
 
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -113,7 +115,10 @@ const ChatRoomContainer = () => {
     const result: any[] = [];
     let lastDate: string | null = null;
 
-    msgs.forEach((msg) => {
+    // Filter out deleted messages first
+    const visibleMessages = msgs.filter(msg => !msg.deleted);
+
+    visibleMessages.forEach((msg) => {
       const msgDate = new Date(
         msg.createdAt?.toString ? Number(msg.createdAt) : (msg.createdAt as number)
       );
@@ -131,7 +136,7 @@ const ChatRoomContainer = () => {
       }
       result.push({ ...msg, type: "message" });
     });
-     console.log("check resilt", result)
+     
     return result;
    
   }, []);
@@ -242,7 +247,6 @@ const ChatRoomContainer = () => {
       const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
       const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
       const files = [{ uri, type, fileName }];
-      console.log("Uploading voice message from path:", uri)
       const uploadedUrls = await uploadMultipleToCloudinary(files);
 
       const payload: any = {
@@ -273,6 +277,73 @@ const ChatRoomContainer = () => {
     }
   };
 
+  // Handle GIF selection
+  const handleGifSelect = useCallback(async (gifUrl: string, gifTitle: string) => {
+    if (!roomId || !myId) {
+      Alert.alert("Error", "Chat room not ready or user not authenticated.");
+      return;
+    }
+
+    try {
+      const payload: any = {
+        text: gifTitle || 'GIF',
+        senderId: myId,
+        receiverId: friendId,
+        createdAt: Date.now(),
+        messageType: 'gif',
+        media: [{ uri: gifUrl, type: 'image/gif' }],
+      };
+
+      if (replyingTo) {
+        payload.replyTo = {
+          messageId: replyingTo.id || "",
+          text: replyingTo.text,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+        };
+        await sendReplyMessage(roomId, payload);
+        setReplyingTo(null);
+      } else {
+        await sendMessage(roomId, payload);
+      }
+    } catch (err: any) {
+      Alert.alert("Error", `Failed to send GIF: ${err.message}`);
+    }
+  }, [roomId, myId, friendId, friendName, myName, replyingTo]);
+
+  // Handle sticker selection
+  const handleStickerSelect = useCallback(async (sticker: string) => {
+    if (!roomId || !myId) {
+      Alert.alert("Error", "Chat room not ready or user not authenticated.");
+      return;
+    }
+
+    try {
+      const payload: any = {
+        text: sticker,
+        senderId: myId,
+        receiverId: friendId,
+        createdAt: Date.now(),
+        messageType: 'sticker',
+      };
+
+      if (replyingTo) {
+        payload.replyTo = {
+          messageId: replyingTo.id || "",
+          text: replyingTo.text,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+        };
+        await sendReplyMessage(roomId, payload);
+        setReplyingTo(null);
+      } else {
+        await sendMessage(roomId, payload);
+      }
+    } catch (err: any) {
+      Alert.alert("Error", `Failed to send sticker: ${err.message}`);
+    }
+  }, [roomId, myId, friendId, friendName, myName, replyingTo]);
+
   // Send message
   const onSend = useCallback(async () => {
     if (!roomId || !myId) {
@@ -299,11 +370,49 @@ const ChatRoomContainer = () => {
         uploadedUrls = await uploadMultipleToCloudinary(files);
       }
 
+      // Determine messageType based on media content
+      let messageType = 'text';
+      if (uploadedUrls.length > 0) {
+        const firstFile = selectedFiles[0];
+        const firstFileType = firstFile.type;
+        const firstFileUri = firstFile.uri || '';
+        const fileName = firstFile.fileName || '';
+        
+        console.log('DEBUG - File detection:', {
+          type: firstFileType,
+          uri: firstFileUri,
+          fileName: fileName
+        });
+        
+        // Enhanced GIF detection - check MIME type, file extension, and URI
+        const isGif = firstFileType === 'image/gif' || 
+                     fileName.toLowerCase().endsWith('.gif') ||
+                     firstFileUri.toLowerCase().includes('.gif');
+        
+        console.log('DEBUG - GIF detection:', { isGif, firstFileType });
+        
+        if (isGif) {
+          messageType = 'gif';
+        } else if (firstFileType?.startsWith('video')) {
+          messageType = 'video';
+        } else if (firstFileType?.startsWith('audio')) {
+          messageType = 'audio';
+        } else if (firstFileType?.startsWith('image')) {
+          // This should come AFTER GIF check to avoid catching image/gif
+          messageType = 'image';
+        } else {
+          messageType = 'file';
+        }
+        
+        console.log('DEBUG - Final messageType:', messageType);
+      }
+
       const payload: any = {
         text: text.trim(),
         senderId: myId,
         receiverId: friendId,
         createdAt: Date.now(),
+        messageType,
         ...(uploadedUrls.length > 0 && {
           media: uploadedUrls.map((url, i) => ({ uri: url, type: selectedFiles[i].type })),
         }),
@@ -320,7 +429,6 @@ const ChatRoomContainer = () => {
       if (replyingTo) {
         await sendReplyMessage(roomId, payload);
       } else {
-        console.log(roomId , "correct", payload)
         await sendMessage(roomId, payload);
       }
     } catch (err: any) {
@@ -406,7 +514,7 @@ const ChatRoomContainer = () => {
         undefined,
         mediaItem.type
       );
-      console.log("check result,", result)
+    
 
       if (result.success && result.filePath) {
         // Extract just the filename from the full path for display
@@ -432,8 +540,7 @@ const ChatRoomContainer = () => {
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
-
-        console.log("corrected", item)
+      console.log("item tyoe", item.messageType)
       if (item.type === "separator") {
         return (
           <View style={styles.separatorContainer}>
@@ -450,7 +557,7 @@ const ChatRoomContainer = () => {
 
       return (
         <Swipeable
-          ref={(ref) => (rowRef = ref)}
+          ref={(ref) => { rowRef = ref; }}
           friction={1.5}
           leftThreshold={ACTION_WIDTH * 0.5}
           overshootLeft={false}
@@ -474,6 +581,7 @@ const ChatRoomContainer = () => {
             media={item.media}
             isMine={item.senderId === myId}
             timestamp={item.createdAt}
+            messageType={item.messageType}
             replyTo={item.replyTo}
             onLongPress={() => handleLongPress(item)}
             currentUserId={myId}
@@ -612,6 +720,12 @@ const ChatRoomContainer = () => {
               >
                 <Icon name="add-circle-outline" size={30} color={colors.primary} />
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMediaPickerVisible(true)}
+                style={styles.attachButton}
+              >
+                <Icon name="happy-outline" size={30} color={colors.primary} />
+              </TouchableOpacity>
               {isVoiceMode ? (
                 <VoiceMessage
                   onSend={handleVoiceSend}
@@ -643,6 +757,13 @@ const ChatRoomContainer = () => {
               visible={visible}
               onClose={() => setVisible(false)}
               onResult={(res) => setSelectedFiles([...selectedFiles, ...res])}
+            />
+
+            <MediaPicker
+              visible={mediaPickerVisible}
+              onClose={() => setMediaPickerVisible(false)}
+              onGifSelect={handleGifSelect}
+              onStickerSelect={handleStickerSelect}
             />
           </>
         )}
