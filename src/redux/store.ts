@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
 import languageReducer from './slices/languageSlice';
 import chatsReducer from './slices/chatsSlice';
+import messagesReducer from './slices/messagesSlice';
 import appBootstrapReducer from './slices/appBootstrap';
 
 export const store = configureStore({
@@ -11,6 +12,7 @@ export const store = configureStore({
     theme: themeReducer,
     language: languageReducer,
     chats: chatsReducer,
+    messages: messagesReducer,
     app: appBootstrapReducer,
   },
   middleware: (getDefault) => getDefault({ serializableCheck: false }),

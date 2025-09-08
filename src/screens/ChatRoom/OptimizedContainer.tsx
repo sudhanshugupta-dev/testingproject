@@ -16,16 +16,13 @@ import {
   ScrollView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  listenToMessages,
   sendMessage,
   sendReplyMessage,
   getOrCreateChatRoom,
   markMessagesAsRead,
   deleteMessage,
   pinMessage,
-  fetchMessagesPage,
   Message,
 } from "../../services/firebase/chat";
 import downloadService from "../../services/downloadService";
@@ -45,22 +42,26 @@ import {
   Swipeable,
 } from "react-native-gesture-handler";
 import VoiceMessage from "../../components/VoiceMessage";
-const ACTION_WIDTH = 80;
-const getCacheKey = (roomId: string) => `chat_messages_${roomId}`;
-const getRoomCacheKey = (myId: string, friendId: string) => `chat_room_${myId}_${friendId}`;
+import { 
+  loadInitialMessages,
+  loadOlderMessages,
+  startRoomMessageListener,
+  stopRoomMessageListener,
+  addOptimisticMessage,
+  removeMessage,
+  updateMessageId,
+  clearRoomMessages,
+} from "../../redux/slices/messagesSlice";
+import {
+  saveMessagesToCache,
+  loadMessagesFromCache,
+  saveRoomIdToCache,
+  loadRoomIdFromCache,
+  validateAndRepairCache,
+} from "../../utils/messageCache";
+import { formatDateSeparator, isSameDay } from "../../utils/timestampUtils";
 
-// Debounce utility
-const debounce = (func: Function, wait: number) => {
-  let timeout: any;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
+const ACTION_WIDTH = 80;
 
 // Reply swipe action
 const LeftAction = memo(function LeftAction({
@@ -92,24 +93,27 @@ const LeftAction = memo(function LeftAction({
   );
 });
 
-const ChatRoomContainer = () => {
+const OptimizedChatRoomContainer = () => {
   const route = useRoute<any>();
   const { friendId, friendName } = route.params || {};
   const nav = useNavigation<any>();
+  const dispatch = useDispatch<AppDispatch>();
 
   const myId = useSelector((s: RootState) => s.auth.user?.uid);
   const myName = useSelector((s: RootState) => s.auth.user?.email || "Me");
 
+  // Redux state
+  const roomMessages = useSelector((state: RootState) => state.messages.messages);
+  const roomLoading = useSelector((state: RootState) => state.messages.loading);
+  const roomErrors = useSelector((state: RootState) => state.messages.error);
+  const hasMoreMessages = useSelector((state: RootState) => state.messages.hasMoreMessages);
+  const oldestTimestamps = useSelector((state: RootState) => state.messages.oldestTimestamp);
+
+  // Local state
   const [roomId, setRoomId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [isInitialFetch, setIsInitialFetch] = useState(true);
-  const [hasLoadedCache, setHasLoadedCache] = useState(false);
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [oldestTimestamp, setOldestTimestamp] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [visible, setVisible] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -117,223 +121,166 @@ const ChatRoomContainer = () => {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [forwardBottomSheetVisible, setForwardBottomSheetVisible] = useState(false);
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
 
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const openRowRef = useRef<Swipeable | null>(null);
-  const shouldScrollRef = useRef(true);
   const sendButtonScale = useRef(new Animated.Value(1)).current;
+  const isScrolledToBottom = useRef(true);
+
+  // Current room data
+  const messages = roomId ? (roomMessages[roomId] || []) : [];
+  const isLoading = roomId ? (roomLoading[roomId] || false) : false;
+  const error = roomId ? (roomErrors[roomId] || null) : null;
+  const hasMore = roomId ? (hasMoreMessages[roomId] !== false) : true;
+  const oldestTimestamp = roomId ? (oldestTimestamps[roomId] || null) : null;
 
   // Group messages with date separators
   const getMessagesWithSeparators = useCallback((msgs: Message[]) => {
     const result: any[] = [];
     let lastDate: string | null = null;
 
-    // Sort messages by timestamp to ensure correct order
-    const sortedMsgs = [...msgs].sort((a, b) => {
-      const aTime = a.createdAt?.toString ? Number(a.createdAt) : (a.createdAt as number);
-      const bTime = b.createdAt?.toString ? Number(b.createdAt) : (b.createdAt as number);
-      return aTime - bTime;
-    });
-
-    sortedMsgs.forEach((msg) => {
-      const msgDate = new Date(
-        msg.createdAt?.toString ? Number(msg.createdAt) : (msg.createdAt as number)
-      );
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      let label = msgDate.toLocaleDateString();
-      if (msgDate.toDateString() === today.toDateString()) label = "Today";
-      if (msgDate.toDateString() === yesterday.toDateString()) label = "Yesterday";
-
-      if (label !== lastDate) {
-        result.push({ id: `sep-${label}`, type: "separator", label });
-        lastDate = label;
+    msgs.forEach((msg, index) => {
+      const timestamp = msg.createdAt?.toString ? Number(msg.createdAt) : (msg.createdAt as number);
+      const currentDate = formatDateSeparator(timestamp);
+      
+      // Add date separator if day changed
+      if (currentDate !== lastDate && currentDate) {
+        result.push({ 
+          id: `separator-${timestamp}`, 
+          type: "separator", 
+          label: currentDate 
+        });
+        lastDate = currentDate;
       }
+      
       result.push({ ...msg, type: "message" });
     });
+
     return result;
   }, []);
 
-  const messagesWithSeparators = useMemo(() => getMessagesWithSeparators(messages), [messages, getMessagesWithSeparators]);
+  const messagesWithSeparators = useMemo(() => 
+    getMessagesWithSeparators(messages), 
+    [messages, getMessagesWithSeparators]
+  );
 
-  // Cache handling for messages
-  const loadCachedMessages = useCallback(async (rid: string) => {
-    try {
-      const cached = await AsyncStorage.getItem(getCacheKey(rid));
-      if (cached) {
-        const parsed = JSON.parse(cached) as Message[];
-        setMessages(parsed);
-        setHasLoadedCache(true);
-        // Set oldest timestamp for pagination
-        if (parsed.length > 0) {
-          const oldest = parsed[0];
-          const timestamp = oldest.createdAt?.toString ? Number(oldest.createdAt) : (oldest.createdAt as number);
-          setOldestTimestamp(timestamp);
-        }
-        // Scroll to bottom after loading cached messages
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
-        return true;
-      }
-    } catch {
-      try {
-        await AsyncStorage.removeItem(getCacheKey(rid));
-      } catch {}
-    }
-    return false;
-  }, []);
-
-  const saveMessagesToCache = useCallback(async (rid: string, msgs: Message[]) => {
-    try {
-      await AsyncStorage.setItem(getCacheKey(rid), JSON.stringify(msgs));
-    } catch {}
-  }, []);
-
-  // Cache handling for room ID
-  const loadCachedRoomId = useCallback(async () => {
-    try {
-      const cached = await AsyncStorage.getItem(getRoomCacheKey(myId!, friendId));
-      if (cached) {
-        setRoomId(cached);
-        const hasCache = await loadCachedMessages(cached);
-        // If we have cached messages, try to load a fresh page to check for new messages
-        if (hasCache) {
-          try {
-            const latestMessages = await fetchMessagesPage(cached, 20);
-            if (latestMessages.length > 0) {
-              // Check if we have newer messages than cache
-              const cachedNewest = messages.length > 0 ? messages[messages.length - 1] : null;
-              const fetchedNewest = latestMessages[latestMessages.length - 1];
-              
-              if (!cachedNewest || 
-                  (fetchedNewest.createdAt > (cachedNewest.createdAt?.toString ? Number(cachedNewest.createdAt) : (cachedNewest.createdAt as number)))) {
-                setMessages(latestMessages);
-                saveMessagesToCache(cached, latestMessages);
-              }
-            }
-          } catch (error) {
-            console.log('Failed to fetch latest messages, using cache:', error);
-          }
-        }
-        return cached;
-      }
-    } catch {}
-    return null;
-  }, [myId, friendId, loadCachedMessages, messages, saveMessagesToCache]);
-
-  const saveRoomIdToCache = useCallback(async (rid: string) => {
-    try {
-      await AsyncStorage.setItem(getRoomCacheKey(myId!, friendId), rid);
-    } catch {}
-  }, [myId, friendId]);
-
-  // Init chat room
+  // Initialize chat room
   useEffect(() => {
     if (!myId || !friendId) {
-      setError("Invalid user or friend ID");
+      Alert.alert("Error", "Invalid user or friend ID");
       return;
     }
 
     if (myId === friendId) {
-      setError("Cannot chat with yourself");
+      Alert.alert("Error", "Cannot chat with yourself");
       return;
     }
 
     const initializeChat = async () => {
-      console.log('Initializing chat for:', myId, friendId);
+      setIsInitializing(true);
       
       try {
-        // Load cached room ID and messages first
-        const cachedRoomId = await loadCachedRoomId();
-        console.log('Cached room ID:', cachedRoomId);
-        
-        const chatRoomId = cachedRoomId || (await getOrCreateChatRoom(myId, friendId));
-        console.log('Chat room ID:', chatRoomId);
-        
-        setRoomId(chatRoomId);
-        
+        // Try to load cached room ID first
+        const cachedRoomId = await loadRoomIdFromCache(myId, friendId);
+        let chatRoomId = cachedRoomId;
+
         if (!cachedRoomId) {
-          await saveRoomIdToCache(chatRoomId);
+          // Create or get room ID
+          chatRoomId = await getOrCreateChatRoom(myId, friendId);
+          await saveRoomIdToCache(myId, friendId, chatRoomId);
         }
-        
-        setIsInitialFetch(false);
-      } catch (err: any) {
-        console.error('Error initializing chat:', err);
-        setError(err.message || "Failed to load chat. Please try again.");
-        setIsInitialFetch(false);
+
+        setRoomId(chatRoomId);
+
+        // Try to load cached messages first for instant display
+        const cachedData = await loadMessagesFromCache(chatRoomId);
+        if (cachedData && cachedData.messages.length > 0) {
+          // Validate cache integrity
+          const isCacheValid = await validateAndRepairCache(chatRoomId);
+          if (isCacheValid) {
+            // Load cached messages into Redux
+            dispatch({
+              type: 'messages/setRoomMessages',
+              payload: { roomId: chatRoomId, messages: cachedData.messages }
+            });
+            console.log('Loaded cached messages:', cachedData.messages.length);
+            
+            // Scroll to bottom after loading cache
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 100);
+          }
+        }
+
+        // Load initial messages from server
+        await dispatch(loadInitialMessages({ roomId: chatRoomId, limit: 20 })).unwrap();
+
+        // Start real-time listener
+        dispatch(startRoomMessageListener(chatRoomId));
+
+        // Cache the messages
+        const currentMessages = roomMessages[chatRoomId] || [];
+        if (currentMessages.length > 0) {
+          await saveMessagesToCache(chatRoomId, currentMessages);
+        }
+
+      } catch (error: any) {
+        console.error('Error initializing chat:', error);
+        Alert.alert("Error", error.message || "Failed to initialize chat");
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     initializeChat();
-  }, [myId, friendId, loadCachedRoomId, saveRoomIdToCache]);
 
-  // Listen for new messages
+    // Cleanup on unmount
+    return () => {
+      if (roomId) {
+        dispatch(stopRoomMessageListener(roomId));
+      }
+    };
+  }, [myId, friendId, dispatch]);
+
+  // Auto-scroll to bottom for new messages
   useEffect(() => {
-    if (!roomId) return;
-
-    console.log('Setting up message listener for room:', roomId);
-    const unsubscribe = listenToMessages(roomId, (msgs) => {
-      console.log('Received messages from listener:', msgs.length);
-      const processed = msgs.map((m) => ({
-        ...m,
-        createdAt: m.createdAt?.toMillis ? m.createdAt.toMillis() : m.createdAt || Date.now(),
-        id: m.id || `${m.senderId}-${m.createdAt}`,
-      }));
-      
-      console.log('Processed messages:', processed.length);
-      setMessages(processed);
-      saveMessagesToCache(roomId, processed);
-      setError(null);
-      setIsInitialFetch(false);
-      
-      // Update oldest timestamp for pagination
-      if (processed.length > 0) {
-        const oldest = processed[0];
-        const timestamp = oldest.createdAt?.toString ? Number(oldest.createdAt) : (oldest.createdAt as number);
-        setOldestTimestamp(timestamp);
+    if (messages.length > 0 && roomId) {
+      // Auto-scroll to bottom for new messages (only if user is already at bottom)
+      if (isScrolledToBottom.current) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
       }
-    });
-
-    return unsubscribe;
-  }, [roomId, saveMessagesToCache]);
-
-  // Load older messages for pagination
-  const loadOlderMessages = useCallback(async () => {
-    if (!roomId || isLoadingOlder || !hasMoreMessages || !oldestTimestamp) return;
-    
-    setIsLoadingOlder(true);
-    try {
-      const olderMessages = await fetchMessagesPage(roomId, 20, oldestTimestamp);
       
-      if (olderMessages.length === 0) {
-        setHasMoreMessages(false);
-      } else {
-        // Prepend older messages to existing messages
-        setMessages(prevMessages => {
-          const combined = [...olderMessages, ...prevMessages];
-          // Update cache with combined messages
-          saveMessagesToCache(roomId, combined);
-          return combined;
-        });
-        
-        // Update oldest timestamp
-        const oldest = olderMessages[0];
-        const timestamp = oldest.createdAt?.toString ? Number(oldest.createdAt) : (oldest.createdAt as number);
-        setOldestTimestamp(timestamp);
-      }
-    } catch (error) {
-      console.error('Error loading older messages:', error);
-    } finally {
-      setIsLoadingOlder(false);
+      // Cache messages periodically
+      saveMessagesToCache(roomId, messages);
+      
+      // Mark messages as read
+      markMessagesAsRead(roomId, myId!);
     }
-  }, [roomId, isLoadingOlder, hasMoreMessages, oldestTimestamp, saveMessagesToCache]);
+  }, [messages.length, roomId, myId]);
 
-  // Handle voice send
-  const handleVoiceSend = async (uri: string) => {
+  // Load older messages (pagination)
+  const handleLoadMore = useCallback(async () => {
+    if (!roomId || isLoading || !hasMore || !oldestTimestamp) {
+      return;
+    }
+
+    try {
+      await dispatch(loadOlderMessages({ 
+        roomId, 
+        beforeTimestamp: oldestTimestamp,
+        limit: 20 
+      })).unwrap();
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+    }
+  }, [roomId, isLoading, hasMore, oldestTimestamp, dispatch]);
+
+  // Handle voice message send
+  const handleVoiceSend = useCallback(async (uri: string) => {
     if (!roomId || !myId) {
       Alert.alert("Error", "Chat room not ready or user not authenticated.");
       setIsVoiceMode(false);
@@ -344,7 +291,8 @@ const ChatRoomContainer = () => {
       const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
       const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
       const files = [{ uri, type, fileName }];
-      console.log("Uploading voice message from path:", uri)
+      
+      console.log("Uploading voice message from path:", uri);
       const uploadedUrls = await uploadMultipleToCloudinary(files);
 
       const payload: any = {
@@ -373,9 +321,9 @@ const ChatRoomContainer = () => {
     } finally {
       setIsVoiceMode(false);
     }
-  };
+  }, [roomId, myId, friendId, replyingTo, myName, friendName]);
 
-  // Send message
+  // Send text/media message
   const onSend = useCallback(async () => {
     if (!roomId || !myId) {
       Alert.alert("Error", "Chat room not ready or user not authenticated.");
@@ -397,6 +345,8 @@ const ChatRoomContainer = () => {
       senderId: myId,
       receiverId: friendId,
       createdAt: Date.now(),
+      isSeen: false,
+      seenBy: {},
       media: selectedFiles.map((file) => ({ uri: file.uri, type: file.type })),
       replyTo: replyingTo ? {
         messageId: replyingTo.id || "",
@@ -406,7 +356,8 @@ const ChatRoomContainer = () => {
       } : undefined,
     };
 
-    setMessages((prev) => [...prev, optimisticMessage]);
+    // Add optimistic message
+    dispatch(addOptimisticMessage({ roomId, message: optimisticMessage }));
 
     try {
       let uploadedUrls: string[] = [];
@@ -438,47 +389,39 @@ const ChatRoomContainer = () => {
         }),
       };
 
-      let finalMessageId: string;
       if (replyingTo) {
-        finalMessageId = await sendReplyMessage(roomId, payload);
+        await sendReplyMessage(roomId, payload);
       } else {
-        console.log(roomId , "correct", payload)
-        finalMessageId = await sendMessage(roomId, payload);
+        await sendMessage(roomId, payload);
       }
 
-      // Update optimistic message with real ID
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessageId ? { ...msg, id: finalMessageId } : msg
-        )
-      );
+      // The real message will be received via the real-time listener
+      // Remove the optimistic message as it will be replaced
+      dispatch(removeMessage({ roomId, messageId: tempMessageId }));
 
-      Alert.alert("Success", "Message sent successfully!");
     } catch (err: any) {
       // Remove optimistic message on failure
-      setMessages((prev) => prev.filter((msg) => msg.id !== tempMessageId));
+      dispatch(removeMessage({ roomId, messageId: tempMessageId }));
       Alert.alert("Error", `Failed to send message: ${err.message}`);
     } finally {
       setText("");
       setSelectedFiles([]);
       setReplyingTo(null);
     }
-  }, [text, selectedFiles, replyingTo, myId, myName, friendId, friendName, roomId, isVoiceMode]);
+  }, [roomId, myId, friendId, text, selectedFiles, replyingTo, myName, friendName, isVoiceMode, dispatch]);
 
-  // Long press modal
+  // Handle message actions
   const handleLongPress = useCallback((msg: Message) => {
     setSelectedMessage(msg);
     setModalVisible(true);
   }, []);
 
-  // Handle forward message
   const handleForward = useCallback((message: Message) => {
     setMessageToForward(message);
     setModalVisible(false);
     setForwardBottomSheetVisible(true);
   }, []);
 
-  // Handle pin message
   const handlePin = useCallback(async (message: Message) => {
     if (!roomId || !myId) return;
     
@@ -492,7 +435,6 @@ const ChatRoomContainer = () => {
     }
   }, [roomId, myId]);
 
-  // Handle delete message
   const handleDelete = useCallback(async (message: Message) => {
     if (!roomId || !myId) return;
     
@@ -519,7 +461,6 @@ const ChatRoomContainer = () => {
     );
   }, [roomId, myId]);
 
-  // Handle download media
   const handleDownload = useCallback(async (message: Message) => {
     if (!message.media || message.media.length === 0) {
       Alert.alert('Error', 'No media to download');
@@ -529,9 +470,8 @@ const ChatRoomContainer = () => {
     setModalVisible(false);
 
     try {
-      const mediaItem = message.media[0]; // Download first media item
+      const mediaItem = message.media[0];
       
-      // Show loading alert
       Alert.alert('Downloading...', 'Please wait while we download your file');
       
       const result = await downloadService.downloadFile(
@@ -539,10 +479,8 @@ const ChatRoomContainer = () => {
         undefined,
         mediaItem.type
       );
-      console.log("check result,", result)
 
       if (result.success && result.filePath) {
-        // Extract just the filename from the full path for display
         const fileName = result.filePath.split('/').pop() || 'file';
         const folderPath = Platform.OS === 'android' ? 'Downloads' : 'Documents';
         
@@ -551,10 +489,8 @@ const ChatRoomContainer = () => {
           `File saved successfully!\n\nFile: ${fileName}\nLocation: ${folderPath} folder\n\nFull path: ${result.filePath}`,
           [{ text: 'OK' }]
         );
-        
-        console.log('File downloaded to:', result.filePath);
       } else {
-        Alert.alert('Download Fail ❌', result.error || 'Unknown error occurred');
+        Alert.alert('Download Failed ❌', result.error || 'Unknown error occurred');
       }
     } catch (error: any) {
       console.error('Download error:', error);
@@ -562,72 +498,69 @@ const ChatRoomContainer = () => {
     }
   }, []);
 
-  // Render messages
-  const renderMessage = useCallback(
-    ({ item }: { item: any }) => {
-      if (item.type === "separator") {
-        return (
-          <View style={styles.separatorContainer}>
-            <Text style={[styles.separatorText, { color: colors.text + "80" }]}>
-              {item.label}
-            </Text>
-          </View>
-        );
-      }
+  // Scroll tracking
+  const onScrollToIndexFailed = useCallback(() => {
+    // Handle scroll to index failure gracefully
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }, 100);
+  }, []);
 
-      if (item.deleted) return null;
+  const onScroll = useCallback((event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const isAtBottom = contentOffset.y >= (contentSize.height - layoutMeasurement.height - 50);
+    isScrolledToBottom.current = isAtBottom;
+  }, []);
 
-      let rowRef: Swipeable | null = null;
-
+  // Render message with swipe actions
+  const renderMessage = useCallback(({ item }: { item: any }) => {
+    if (item.type === "separator") {
       return (
-        <Swipeable
-          ref={(ref) => { rowRef = ref; }}
-          friction={1.5}
-          leftThreshold={ACTION_WIDTH * 0.5}
-          overshootLeft={false}
-          overshootFriction={1}
-          renderLeftActions={(progress) => <LeftAction progress={progress} />}
-          onSwipeableWillOpen={() => {
-            if (openRowRef.current && openRowRef.current !== rowRef) {
-              openRowRef.current.close();
-            }
-            openRowRef.current = rowRef;
-            setReplyingTo(item);
-            setTimeout(() => rowRef?.close(), 300);
-          }}
-          onSwipeableClose={() => {
-            if (openRowRef.current === rowRef) openRowRef.current = null;
-          }}
-          containerStyle={styles.swipeableContainer}
-        >
-          <ChatBubble
-            text={item.text}
-            media={item.media}
-            isMine={item.senderId === myId}
-            timestamp={item.createdAt}
-            replyTo={item.replyTo}
-            onLongPress={() => handleLongPress(item)}
-            currentUserId={myId}
-          />
-        </Swipeable>
+        <View style={styles.separatorContainer}>
+          <Text style={[styles.separatorText, { color: colors.text + "80" }]}>
+            {item.label}
+          </Text>
+        </View>
       );
-    },
-    [myId, colors, handleLongPress]
-  );
-
-  // Mark as read
-  useEffect(() => {
-    if (roomId && myId) markMessagesAsRead(roomId, myId);
-  }, [roomId, myId]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 200);
     }
-  }, [messages.length]);
+
+    if (item.deleted) return null;
+
+    let rowRef: Swipeable | null = null;
+
+    return (
+      <Swipeable
+        ref={(ref) => { rowRef = ref; }}
+        friction={1.5}
+        leftThreshold={ACTION_WIDTH * 0.5}
+        overshootLeft={false}
+        overshootFriction={1}
+        renderLeftActions={(progress) => <LeftAction progress={progress} />}
+        onSwipeableWillOpen={() => {
+          if (openRowRef.current && openRowRef.current !== rowRef) {
+            openRowRef.current.close();
+          }
+          openRowRef.current = rowRef;
+          setReplyingTo(item);
+          setTimeout(() => rowRef?.close(), 300);
+        }}
+        onSwipeableClose={() => {
+          if (openRowRef.current === rowRef) openRowRef.current = null;
+        }}
+        containerStyle={styles.swipeableContainer}
+      >
+        <ChatBubble
+          text={item.text}
+          media={item.media}
+          isMine={item.senderId === myId}
+          timestamp={item.createdAt}
+          replyTo={item.replyTo}
+          onLongPress={() => handleLongPress(item)}
+          currentUserId={myId}
+        />
+      </Swipeable>
+    );
+  }, [myId, colors, handleLongPress]);
 
   // Send button animation
   const showSend = text.trim().length > 0 || selectedFiles.length > 0;
@@ -638,6 +571,17 @@ const ChatRoomContainer = () => {
       useNativeDriver: true,
     }).start();
   }, [showSend, isVoiceMode, sendButtonScale]);
+
+  if (isInitializing) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          {t("chat.initializing", "Initializing chat...")}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -657,17 +601,9 @@ const ChatRoomContainer = () => {
               {friendName || t("chat.friend")}
             </Text>
             <Text style={[styles.roomInfo, { color: colors.text, opacity: 0.6 }]}>
-              Room: {roomId ? roomId.substring(0, 8) + "..." : t("chat.loading")}
+              {messages.length > 0 ? `${messages.length} messages` : t("chat.loading")}
             </Text>
           </View>
-        </View>
-
-        {/* Debug Info */}
-        <View style={{ padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontSize: 12, color: '#666' }}>Debug: Room ID: {roomId || 'None'}</Text>
-          <Text style={{ fontSize: 12, color: '#666' }}>Messages: {messages.length}</Text>
-          <Text style={{ fontSize: 12, color: '#666' }}>Loading: {isInitialFetch ? 'Yes' : 'No'}</Text>
-          <Text style={{ fontSize: 12, color: '#666' }}>Error: {error || 'None'}</Text>
         </View>
 
         {/* Content */}
@@ -675,28 +611,14 @@ const ChatRoomContainer = () => {
           <View style={styles.errorContainer}>
             <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
             <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: colors.primary, opacity: isRetrying ? 0.7 : 1 }]}
-              onPress={async () => {
-                if (isRetrying) return;
-                setIsRetrying(true);
-                setError(null);
-                setIsInitialFetch(true);
-                try {
-                  const chatRoomId = await getOrCreateChatRoom(myId!, friendId);
-                  setRoomId(chatRoomId);
-                  await saveRoomIdToCache(chatRoomId);
-                  await loadCachedMessages(chatRoomId);
-                  setIsInitialFetch(false);
-                } catch (err: any) {
-                  setError(err.message || "Failed to reconnect. Please try again.");
-                  setIsInitialFetch(false);
-                } finally {
-                  setIsRetrying(false);
+              style={[styles.retryButton, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                if (roomId) {
+                  dispatch(loadInitialMessages({ roomId, limit: 20 }));
                 }
               }}
-              disabled={isRetrying}
             >
-              <Text style={styles.retryButtonText}>{isRetrying ? "Retrying..." : "Retry"}</Text>
+              <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -706,53 +628,42 @@ const ChatRoomContainer = () => {
               data={messagesWithSeparators}
               keyExtractor={(item) => item.id}
               renderItem={renderMessage}
+              inverted
+              onScroll={onScroll}
+              onScrollToIndexFailed={onScrollToIndexFailed}
               contentContainerStyle={styles.messageListContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               initialNumToRender={20}
               maxToRenderPerBatch={10}
               windowSize={21}
-              onRefresh={loadOlderMessages}
-              refreshing={isLoadingOlder}
+              onRefresh={handleLoadMore}
+              refreshing={isLoading}
               ListHeaderComponent={
-                hasMoreMessages && messages.length > 0 ? (
+                hasMore && messages.length > 0 ? (
                   <View style={styles.loadMoreContainer}>
                     <Text style={[styles.loadMoreText, { color: colors.text + "80" }]}>
-                      {t("chat.pullToLoadMore")}
+                      {t("chat.pullToLoadMore", "Pull to load more messages")}
                     </Text>
                   </View>
                 ) : messages.length > 0 ? (
                   <View style={styles.loadMoreContainer}>
                     <Text style={[styles.loadMoreText, { color: colors.text + "60" }]}>
-                      {t("chat.noMoreMessages")}
+                      {t("chat.noMoreMessages", "No more messages")}
                     </Text>
                   </View>
                 ) : null
               }
               ListFooterComponent={
-                isInitialFetch && messages.length === 0 ? (
+                isInitializing ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.loadingText, { color: colors.text }]}>
-                      {t("chat.loadingMessages")}
-                    </Text>
-                  </View>
-                ) : messages.length === 0 ? (
-                  <View style={styles.loadingContainer}>
-                    <Text style={[styles.loadingText, { color: colors.text }]}>
-                      No messages yet. Start the conversation!
+                      {t("chat.loadingMessages", "Loading messages...")}
                     </Text>
                   </View>
                 ) : null
               }
-              onContentSizeChange={() => {
-                // Only auto-scroll if we have messages and it's not the initial load from cache
-                if (messages.length > 0 && shouldScrollRef.current) {
-                  const shouldAnimate = !isInitialFetch && hasLoadedCache;
-                  flatListRef.current?.scrollToEnd({ animated: shouldAnimate });
-                  shouldScrollRef.current = false;
-                }
-              }}
             />
 
             {/* Reply bar */}
@@ -942,7 +853,12 @@ const styles = StyleSheet.create({
   headerTextContainer: { marginLeft: 12, flex: 1 },
   friendName: { fontSize: 18, fontWeight: "700" },
   roomInfo: { fontSize: 12, marginTop: 2 },
-  loadingContainer: { padding: 20, alignItems: "center" },
+  loadingContainer: { 
+    padding: 20, 
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
   loadingText: { marginTop: 10, fontSize: 14 },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   errorText: { fontSize: 16, textAlign: "center", marginBottom: 20 },
@@ -1056,4 +972,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatRoomContainer;
+export default OptimizedChatRoomContainer;

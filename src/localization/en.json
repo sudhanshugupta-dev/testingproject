@@ -46,6 +46,8 @@
     "cancel": "Cancel",
     "loadingMessages": "Loading messages...",
     "loadingMore": "Loading more messages...",
+    "pullToLoadMore": "Pull to load older messages",
+    "noMoreMessages": "No more messages to load",
     "error": {
       "invalidUserOrFriend": "Invalid user or friend ID",
       "failedToLoadChat": "Failed to load chat. Please try again.",

@@ -539,6 +539,71 @@ export const sendMessage = async (
 };
 
 
+// Fetch a paginated list of messages from a chat room
+export const fetchMessagesPage = async (
+  roomId: string,
+  limit: number = 20,
+  beforeTimestamp?: number
+): Promise<Message[]> => {
+  try {
+    console.log('Fetching messages page for room:', roomId, 'limit:', limit, 'beforeTimestamp:', beforeTimestamp);
+    
+    let query = firestore()
+      .collection('rooms')
+      .doc(roomId)
+      .collection('messages')
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+    
+    // If we have a beforeTimestamp, fetch messages before that timestamp
+    if (beforeTimestamp) {
+      query = query.where('createdAt', '<', firestore.Timestamp.fromMillis(beforeTimestamp));
+    }
+    
+    const snapshot = await query.get();
+    
+    const messages: Message[] = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        text: data.text || '',
+        senderId: data.senderId || '',
+        receiverId: data.receiverId || '',
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt || Date.now(),
+        media: data.media || [],
+        messageType: data.messageType || 'text',
+        status: data.status || 'sent',
+        replyTo: data.replyTo || undefined,
+        isSeen: data.isSeen || false,
+        seenBy: data.seenBy || {},
+        voiceUri: data.voiceUri,
+        voiceDuration: data.voiceDuration,
+        deleted: data.deleted || false,
+        deletedAt: data.deletedAt,
+        deletedBy: data.deletedBy,
+        forwardedFrom: data.forwardedFrom,
+      };
+    });
+    
+    // Return in ascending order (oldest first) to match the expected UI order
+    const sortedMessages = messages.reverse();
+    
+    console.log(`Fetched ${sortedMessages.length} messages for room ${roomId}`);
+    return sortedMessages;
+  } catch (error: any) {
+    console.error('Error fetching messages page:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    throw new Error(
+      `Failed to fetch messages: ${error.message} (Code: ${
+        error.code || 'unknown'
+      })`,
+    );
+  }
+};
+
 // Listen to messages in a chat room with real-time updates
 export const listenToMessages = (
   roomId: string,
