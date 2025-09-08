@@ -754,7 +754,9 @@ const ChatRoomContainer = () => {
       }
       result.push({ ...msg, type: "message" });
     });
+     console.log("check resilt", result)
     return result;
+   
   }, []);
 
   // Cache handling for messages
@@ -908,9 +910,12 @@ const ChatRoomContainer = () => {
     setModalVisible(true);
   }, []);
 
+
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
+
+        console.log("corrected", item)
       if (item.type === "separator") {
         return (
           <View style={styles.separatorContainer}>
