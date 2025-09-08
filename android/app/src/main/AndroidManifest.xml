@@ -28,7 +28,12 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+            <action android:name="androidx.core.content.pm.SHORTCUT_CONTENT" />
+            <category android:name="android.intent.category.DEFAULT" />
         </intent-filter>
+        <meta-data
+        android:name="androidx.core.content.MIME_TYPES"
+        android:value="image/gif,image/png,image/jpg,image/webp" />
       </activity>
     </application>
 </manifest>
