@@ -27,6 +27,7 @@ import {
   pinMessage,
   Message,
 } from "../../services/firebase/chat";
+import downloadService from "../../services/downloadService";
 import ChatBubble from "../../components/ChatBubble";
 import CustomAvatar from "../../components/CustomAvatar";
 import ReplyMessageBar from "../../components/ReplyMessageBar";
@@ -383,6 +384,49 @@ const ChatRoomContainer = () => {
     );
   }, [roomId, myId]);
 
+  // Handle download media
+  const handleDownload = useCallback(async (message: Message) => {
+    if (!message.media || message.media.length === 0) {
+      Alert.alert('Error', 'No media to download');
+      return;
+    }
+
+    setModalVisible(false);
+
+    try {
+      const mediaItem = message.media[0]; // Download first media item
+      
+      // Show loading alert
+      Alert.alert('Downloading...', 'Please wait while we download your file');
+      
+      const result = await downloadService.downloadFile(
+        mediaItem.uri,
+        undefined,
+        mediaItem.type
+      );
+      console.log("check result,", result)
+
+      if (result.success && result.filePath) {
+        // Extract just the filename from the full path for display
+        const fileName = result.filePath.split('/').pop() || 'file';
+        const folderPath = Platform.OS === 'android' ? 'Downloads' : 'Documents';
+        
+        Alert.alert(
+          'Download Complete ✅',
+          `File saved successfully!\n\nFile: ${fileName}\nLocation: ${folderPath} folder\n\nFull path: ${result.filePath}`,
+          [{ text: 'OK' }]
+        );
+        
+        console.log('File downloaded to:', result.filePath);
+      } else {
+        Alert.alert('Download Fail ❌', result.error || 'Unknown error occurred');
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      Alert.alert('Download Failed ❌', error.message || 'Unknown error occurred');
+    }
+  }, []);
+
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
@@ -627,6 +671,15 @@ const ChatRoomContainer = () => {
                 <Icon name="pin" size={22} color={colors.primary} />
                 <Text style={[styles.modalText, { color: colors.text }]}>Pin</Text>
               </TouchableOpacity>
+              {selectedMessage?.media && selectedMessage.media.length > 0 && (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => selectedMessage && handleDownload(selectedMessage)}
+                >
+                  <Icon name="download" size={22} color={colors.primary} />
+                  <Text style={[styles.modalText, { color: colors.text }]}>Download</Text>
+                </TouchableOpacity>
+              )}
               {selectedMessage?.senderId === myId && (
                 <TouchableOpacity
                   style={styles.modalItem}
