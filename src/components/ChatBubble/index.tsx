@@ -211,7 +211,12 @@ const ChatBubble = ({
           <Pressable
             style={[
               styles.bubble,
-              // Show primary colors for text messages, transparent for media
+              // Show background for text, semi-transparent for media with text
+              (media && media.length > 0 && text) ? 
+                (isMine 
+                  ? { backgroundColor: 'rgba(129, 140, 248, 0.9)', borderBottomRightRadius: 4 }
+                  : { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderBottomLeftRadius: 4 }
+                ) :
               (media && media.length > 0) ? { backgroundColor: 'transparent' } :
               isMine
                 ? { backgroundColor: '#818CF8', borderBottomRightRadius: 4 }
@@ -223,23 +228,26 @@ const ChatBubble = ({
             
             {renderReplyContext()}
 
-           
-
-            {/* Media content below text */}
+            {/* Media content */}
             {renderMedia()}
 
-            {/* Text content - only show for non-GIF messages */}
-            
-            {messageType != "gif" || (messageType != "gif" && text) ? (
-             <Text
-               style={[
+            {/* Text content - show for all messages except pure GIFs */}
+            {text && messageType !== "gif" && (
+              <View style={[
+                styles.textContainer,
+                (media && media.length > 0) && styles.textOverMedia
+              ]}>
+                <Text
+                  style={[
                     styles.messageText,
                     { color: isMine ? "#fff" : colors.text },
-                ]}
-               >
-                 {text}
-            </Text>
-             ) : null}
+                    (media && media.length > 0) && styles.textWithShadow
+                  ]}
+                >
+                  {text}
+                </Text>
+              </View>
+            )}
 
             {/* Timestamp */}
             {timestamp && !(media && media.length > 0 && media[0].type?.startsWith("audio")) && (
@@ -311,6 +319,20 @@ const styles = StyleSheet.create({
     color: 'red',
     fontStyle: 'italic',
     padding: 8,
+  },
+  textContainer: {
+    marginTop: 8,
+  },
+  textOverMedia: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  textWithShadow: {
+    //textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    //textShadowOffset: { width: 1, height: 1 },
+    //textShadowRadius: 2,
+    color: '#fff',
   },
   gifMessageContainer: {
     position: 'relative',

@@ -485,7 +485,7 @@ export const sendMessage = async (
     }
 
     const messageData: Message = {
-      text: message.text,
+      text: messageType === 'gif' ? '' : message.text, // Don't save text for GIF messages
       senderId: userId,
       receiverId,
       createdAt: serverTimestamp,
