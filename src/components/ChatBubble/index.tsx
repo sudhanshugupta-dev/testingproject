@@ -11,6 +11,7 @@ import ImageRenderer from './ImageRenderer';
 import GifRenderer from './GifRenderer';
 import VideoRenderer from './VideoRenderer';
 import MediaPreviewModal from '../MediaPreviewModal/MediaPreviewModal';
+import VoiceMessageBubble from '../VoiceMessageBubble';
 
 interface MediaItem {
   uri: string;
@@ -109,7 +110,13 @@ const ChatBubble = ({
                    fileUri.toLowerCase().includes('.gif');
       const isImage = mimeType.startsWith("image") && !isGif;
       const isVideo = mimeType.startsWith("video");
-      const isAudio = mimeType.startsWith("audio") || file.type === "audio";
+      const isAudio = mimeType.startsWith("audio") || 
+                     file.type === "audio" || 
+                     messageType === "voice" ||
+                     fileUri.toLowerCase().includes('.m4a') ||
+                     fileUri.toLowerCase().includes('.wav') ||
+                     fileUri.toLowerCase().includes('.mp3') ||
+                     fileUri.toLowerCase().includes('.aac');
 
       if (isGif) {
         gifs.push(file);
@@ -143,9 +150,11 @@ const ChatBubble = ({
         
         {/* Render Audio */}
         {audios.map((file, index) => (
-          <Text key={index} style={styles.unsupportedText}>
-            Audio file
-          </Text>
+          <VoiceMessageBubble
+            key={index}
+            audioUri={file.uri}
+            isMine={isMine}
+          />
         ))}
         
         {/* Render Unsupported */}
@@ -181,7 +190,22 @@ const ChatBubble = ({
         ]}
       >
         {/* Render different message types with appropriate styling */}
-        {messageType === 'gif' ? (
+        {messageType === 'voice' ? (
+          // Voice messages - special styling for voice bubbles
+          <Pressable 
+            style={styles.voiceMessageContainer}
+            onLongPress={onLongPress}
+            delayLongPress={500}
+          >
+            {renderReplyContext()}
+            {renderMedia()}
+            {timestamp && (
+              <Text style={[styles.timestamp, { color: isMine ? "#fff" : colors.text, opacity: 0.7 }]}>
+                {formatTime(timestamp)}
+              </Text>
+            )}
+          </Pressable>
+        ) : messageType === 'gif' ? (
           // GIF messages - transparent background, no text, only GIF
           <Pressable 
             style={styles.gifMessageContainer}
@@ -336,6 +360,9 @@ const styles = StyleSheet.create({
   },
   gifMessageContainer: {
     position: 'relative',
+    backgroundColor: 'transparent',
+  },
+  voiceMessageContainer: {
     backgroundColor: 'transparent',
   },
   mediaBackground: {

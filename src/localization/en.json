@@ -49,6 +49,12 @@
     "selectGif": "Select GIF",
     "selectSticker": "Select Sticker",
     "searchGifs": "Search GIFs...",
+    "voiceMessage": "Voice message",
+    "photo": "Photo",
+    "video": "Video",
+    "gif": "GIF",
+    "sticker": "Sticker",
+    "file": "File",
     "error": {
       "invalidUserOrFriend": "Invalid user or friend ID",
       "failedToLoadChat": "Failed to load chat. Please try again.",

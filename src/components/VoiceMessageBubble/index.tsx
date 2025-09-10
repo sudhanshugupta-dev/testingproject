@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import Sound from 'react-native-nitro-sound';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAppTheme } from '../../themes/useTheme';
+import { useTheme } from '@react-navigation/native';
 
 interface VoiceMessageBubbleProps {
   audioUri: string;
@@ -18,41 +18,49 @@ const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(duration || 0);
-  const audioRecorderPlayer = AudioRecorderPlayer;
   
-  const { colors } = useAppTheme();
+  const { colors } = useTheme();
 
   useEffect(() => {
     return () => {
       // Cleanup on unmount
-      audioRecorderPlayer.stopPlayer();
-      audioRecorderPlayer.removePlayBackListener();
+      try {
+        Sound.stopPlayer();
+        Sound.removePlayBackListener();
+      } catch (e) {
+        console.log('🎤 VoiceMessageBubble cleanup error:', e);
+      }
     };
-  }, [audioRecorderPlayer]);
+  }, []);
 
   const playAudio = async () => {
     try {
       if (isPlaying) {
-        await audioRecorderPlayer.pausePlayer();
+        await Sound.pausePlayer();
         setIsPlaying(false);
       } else {
-        await audioRecorderPlayer.startPlayer(audioUri);
-        setIsPlaying(true);
-
-        audioRecorderPlayer.addPlayBackListener((e: any) => {
+        console.log('🎤 VoiceMessageBubble: Starting playback for:', audioUri);
+        
+        // Set up playback progress listener
+        Sound.addPlayBackListener((e: any) => {
+          console.log('🎤 VoiceMessageBubble: Playback progress:', e.currentPosition, e.duration);
           setCurrentTime(e.currentPosition);
           setTotalDuration(e.duration);
 
           if (e.currentPosition >= e.duration) {
+            console.log('🎤 VoiceMessageBubble: Playback finished');
             setIsPlaying(false);
             setCurrentTime(0);
-            audioRecorderPlayer.stopPlayer();
-            audioRecorderPlayer.removePlayBackListener();
+            Sound.stopPlayer();
+            Sound.removePlayBackListener();
           }
         });
+        
+        await Sound.startPlayer(audioUri);
+        setIsPlaying(true);
       }
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('🎤 VoiceMessageBubble: Error playing audio:', error);
       setIsPlaying(false);
     }
   };
@@ -69,7 +77,7 @@ const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
   return (
     <View style={[
       styles.container,
-      { backgroundColor: isMine ? colors.primary : colors.card }
+      { backgroundColor: isMine ?  'rgba(129, 140, 248, 0.9)' : colors.card }
     ]}>
       <TouchableOpacity
         style={[

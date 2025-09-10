@@ -12,6 +12,8 @@ type ChatItem = {
     timestamp: any;
     senderId: string;
     isSeen: boolean;
+    messageType?: string;
+    seenBy?: Record<string, boolean>;
   } | null;
   unseenCount: number;
 };
@@ -206,6 +208,7 @@ const listenToChatForFriend = (
                     timestamp: lastMsg?.createdAt ? lastMsg.createdAt.toDate().getTime() : null,
                       senderId: lastMsg.senderId || null,
                       isSeen: lastMsg.status === 'true',
+                      messageType: lastMsg.messageType || 'text',
                       seenBy: lastMsg.seenBy,
                     }
                   : null,
@@ -561,7 +564,7 @@ export const listenToMessages = (
       .collection('rooms')
       .doc(roomId)
       .collection('messages')
-      .orderBy('createdAt', 'asc') // Order by creation time ascending
+      .orderBy('createdAt', 'desc') // Order by creation time descending (newest first)
       .onSnapshot(
         snapshot => {
           const msgs: Message[] = snapshot.docs.map(doc => {

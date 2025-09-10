@@ -15,5 +15,15 @@
   "tabs": { "chat": "Discussions", "requests": "Demandes", "profile": "Profil" },
   "profile": { "logout": "Se déconnecter", "theme": "Thème", "language": "Langue" },
   "language": { "select": "Choisir la langue", "english": "Anglais", "hindi": "Hindi", "spanish": "Espagnol", "french": "Français", "japanese": "Japonais" },
-  "chat": { "typeMessage": "Écrire un message", "send": "Envoyer" }
+  "chat": { 
+    "typeMessage": "Écrire un message", 
+    "send": "Envoyer",
+    "voiceMessage": "Message vocal",
+    "photo": "Photo",
+    "video": "Vidéo",
+    "gif": "GIF",
+    "sticker": "Autocollant",
+    "file": "Fichier",
+    "noMessages": "Aucun message encore"
+  }
 } 
