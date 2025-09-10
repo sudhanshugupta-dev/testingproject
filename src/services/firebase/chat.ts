@@ -45,7 +45,7 @@ export const getOrCreateChatRoom = async (
     const roomRef = firestore().collection('rooms').doc(roomId);
     const roomDoc = await roomRef.get();
     
-    if (roomDoc.exists) {
+    if (roomDoc.exists()) {
       console.log('Existing chat room found:', roomId);
       // Ensure chat entries exist
       await ensureChatEntries(roomId, userId1, userId2);
