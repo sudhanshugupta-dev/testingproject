@@ -110,7 +110,7 @@ const ChatRoomContainer = () => {
   const flatListRef = useRef<FlatList>(null);
   const openRowRef = useRef<Swipeable | null>(null);
 
-  // Group messages with date separators
+  // Group messages with date separators (for descending order)
   const getMessagesWithSeparators = useCallback((msgs: Message[]) => {
     const result: any[] = [];
     let lastDate: string | null = null;
@@ -118,7 +118,8 @@ const ChatRoomContainer = () => {
     // Filter out deleted messages first
     const visibleMessages = msgs.filter(msg => !msg.deleted);
 
-    visibleMessages.forEach((msg) => {
+    // Since messages are now in descending order, we need to reverse for separators
+    visibleMessages.forEach((msg, index) => {
       const msgDate = new Date(
         msg.createdAt?.toString ? Number(msg.createdAt) : (msg.createdAt as number)
       );
@@ -130,11 +131,17 @@ const ChatRoomContainer = () => {
       if (msgDate.toDateString() === today.toDateString()) label = "Today";
       if (msgDate.toDateString() === yesterday.toDateString()) label = "Yesterday";
 
-      if (label !== lastDate) {
-        result.push({ id: `sep-${label}`, type: "separator", label });
-        lastDate = label;
-      }
+      // For descending order, check if this is a different date from the previous message
+      const nextMsg = visibleMessages[index + 1];
+      const shouldShowSeparator = !nextMsg || 
+        new Date(nextMsg.createdAt?.toString ? Number(nextMsg.createdAt) : (nextMsg.createdAt as number))
+          .toDateString() !== msgDate.toDateString();
+
       result.push({ ...msg, type: "message" });
+      
+      if (shouldShowSeparator) {
+        result.push({ id: `sep-${label}`, type: "separator", label });
+      }
     });
      
     return result;
@@ -148,6 +155,7 @@ const ChatRoomContainer = () => {
       if (cached) {
         const parsed = JSON.parse(cached) as Message[];
         setMessages(parsed);
+        setIsInitialFetch(false); // Immediately disable loading when cache is loaded
         return true;
       }
     } catch {}
@@ -166,7 +174,10 @@ const ChatRoomContainer = () => {
       const cached = await AsyncStorage.getItem(getRoomCacheKey(myId!, friendId));
       if (cached) {
         setRoomId(cached);
-        await loadCachedMessages(cached);
+        const hasMessages = await loadCachedMessages(cached);
+        if (hasMessages) {
+          setIsInitialFetch(false); // Ensure no loading when cache exists
+        }
         return cached;
       }
     } catch {}
@@ -192,19 +203,23 @@ const ChatRoomContainer = () => {
     }
 
     const initializeChat = async () => {
-      // Load cached room ID and messages first
-      const cachedRoomId = await loadCachedRoomId();
-      setIsInitialFetch(false);
-
       try {
-        const chatRoomId = cachedRoomId || (await getOrCreateChatRoom(myId, friendId));
-        if (!cachedRoomId) {
+        // Load cached room ID and messages first
+        const cachedRoomId = await loadCachedRoomId();
+        
+        if (cachedRoomId) {
+          // If we have cached room ID, we already loaded cached messages
+          // No need to show loading at all
+          setIsInitialFetch(false);
+        } else {
+          // Only show loading when creating new room
+          setIsInitialFetch(true);
+          const chatRoomId = await getOrCreateChatRoom(myId, friendId);
           setRoomId(chatRoomId);
           await saveRoomIdToCache(chatRoomId);
-          if (!(await loadCachedMessages(chatRoomId))) {
-            // Only show loading state if no cached messages
-            setIsInitialFetch(true);
-          }
+          const hasLoadedCache = await loadCachedMessages(chatRoomId);
+          // Disable loading immediately after cache check
+          setIsInitialFetch(!hasLoadedCache);
         }
       } catch (err: any) {
         setError(err.message || "Failed to load chat. Please try again.");
@@ -225,15 +240,19 @@ const ChatRoomContainer = () => {
         createdAt: m.createdAt?.toMillis ? m.createdAt.toMillis() : m.createdAt || Date.now(),
         id: m.id || `${m.senderId}-${m.createdAt}`,
       }));
+      
+      const isFirstLoad = messages.length === 0;
       setMessages(processed);
       saveMessagesToCache(roomId, processed);
       setError(null);
       setIsInitialFetch(false);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      
+      // For inverted FlatList, new messages appear at the top automatically
+      // No need for manual scrolling as inverted FlatList handles this
     });
 
     return unsubscribe;
-  }, [roomId, saveMessagesToCache]);
+  }, [roomId, saveMessagesToCache, messages.length]);
 
   // Handle voice send
   const handleVoiceSend = async (uri: string) => {
@@ -656,8 +675,13 @@ const ChatRoomContainer = () => {
               contentContainerStyle={styles.messageListContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              ListFooterComponent={
-                isInitialFetch && messages.length === 0 ? (
+              inverted={true}
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10,
+              }}
+              ListHeaderComponent={
+                isInitialFetch && messages.length === 0 && !roomId ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.loadingText, { color: colors.text }]}>
@@ -665,9 +689,6 @@ const ChatRoomContainer = () => {
                     </Text>
                   </View>
                 ) : null
-              }
-              onContentSizeChange={() =>
-                flatListRef.current?.scrollToEnd({ animated: true })
               }
             />
 

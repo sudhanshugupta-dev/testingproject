@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import AnimatedGif from '../AnimatedGif/AnimatedGif';
+import PausableGif from '../AnimatedGif/PausableGif';
 
 interface MediaItem {
   uri: string;
@@ -17,12 +17,13 @@ const GifRenderer: React.FC<GifRendererProps> = ({ media, onPreview }) => {
     <View style={styles.container}>
       {media.map((file, index) => (
         <View key={index} style={styles.mediaBackground}>
-          <AnimatedGif
+          <PausableGif
             uri={file.uri}
             width={200}
             height={200}
             borderRadius={12}
             onPress={() => onPreview(file)}
+            showPlayPauseControls={true}
           />
         </View>
       ))}

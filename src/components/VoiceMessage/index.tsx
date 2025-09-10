@@ -1,204 +1,18 @@
-// // VoiceMessage.tsx
-// import React, { useState } from 'react';
-// import { View, Text, TouchableOpacity, StyleSheet, PermissionsAndroid } from 'react-native';
-// import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-
-// const audioRecorderPlayer = AudioRecorderPlayer; // ✅ instance
-
-// interface VoiceMessageProps {
-//   onSend?: (uri: string) => void;
-// }
-
-// const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend }) => {
-//   const [isRecording, setIsRecording] = useState(false);
-//   const [isPlaying, setIsPlaying] = useState(false);
-//   const [recordTime, setRecordTime] = useState('00:00');
-//   const [playTime, setPlayTime] = useState('00:00');
-//   const [duration, setDuration] = useState('00:00');
-//   const [filePath, setFilePath] = useState<string | null>(null);
-
-//   async function requestPermissions() {
-//     console.log('Requesting mic permissions...');
-//     const granted = await PermissionsAndroid.request(
-//       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-//       {
-//         title: 'Microphone Permission',
-//         message: 'App needs access to your microphone to record audio',
-//         buttonPositive: 'OK',
-//       }
-//     );
-
-//     console.log('Permission result:', granted);
-//     return granted === PermissionsAndroid.RESULTS.GRANTED;
-//   }
-
-//   // 🎙️ Start recording
-//   const startRecording = async () => {
-//     console.log('Start recording pressed');
-//     const hasPermission = await requestPermissions();
-//     if (!hasPermission) {
-//       console.warn('No mic permission');
-//       return;
-//     }
-
-//     try {
-//       const uri = await audioRecorderPlayer.startRecorder();
-//       console.log('Recording started, file path:', uri);
-
-//       audioRecorderPlayer.addRecordBackListener((e) => {
-//         const time = audioRecorderPlayer.mmssss(Math.floor(e.currentPosition));
-//         console.log('Recording progress:', time);
-//         setRecordTime(time);
-//         return;
-//       });
-//       setIsRecording(true);
-//     } catch (err) {
-//       console.error('Recording error:', err);
-//     }
-//   };
-
-//   // ⏹️ Stop recording
-//   const stopRecording = async () => {
-//     console.log('Stop recording pressed');
-//     try {
-//       const result = await audioRecorderPlayer.stopRecorder();
-//       console.log('Recording stopped, result path:', result);
-
-//       audioRecorderPlayer.removeRecordBackListener();
-//       setIsRecording(false);
-//       setFilePath(result);
-
-//       if (onSend) {
-//         console.log('Calling onSend callback with result:', result);
-//         onSend(result);
-//       }
-//     } catch (err) {
-//       console.error('Stop error:', err);
-//     }
-//   };
-
-//   // ▶️ Play recording
-//   const startPlay = async () => {
-//     console.log('Play pressed');
-//     if (!filePath) {
-//       console.warn('No file to play');
-//       return;
-//     }
-
-//     await audioRecorderPlayer.startPlayer(filePath);
-//     console.log('Playback started for:', filePath);
-
-//     audioRecorderPlayer.addPlayBackListener((e) => {
-//       const cur = audioRecorderPlayer.mmssss(Math.floor(e.currentPosition));
-//       const dur = audioRecorderPlayer.mmssss(Math.floor(e.duration));
-//       console.log('Playing... current:', cur, ' duration:', dur);
-
-//       setPlayTime(cur);
-//       setDuration(dur);
-
-//       if (e.currentPosition >= e.duration) {
-//         console.log('Playback finished');
-//         stopPlay();
-//       }
-//       return;
-//     });
-//     setIsPlaying(true);
-//   };
-
-//   // ⏸️ Stop playing
-//   const stopPlay = async () => {
-//     console.log('Stop playback pressed');
-//     await audioRecorderPlayer.stopPlayer();
-//     audioRecorderPlayer.removePlayBackListener();
-//     setIsPlaying(false);
-//   };
-
-//   // ⏩ Forward
-//   const seekForward = async () => {
-//     console.log('Seek forward +5s');
-//     await audioRecorderPlayer.seekToPlayer(5000);
-//   };
-
-//   // ⏪ Backward
-//   const seekBackward = async () => {
-//     console.log('Seek backward -5s');
-//     await audioRecorderPlayer.seekToPlayer(-5000);
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       {!filePath ? (
-//         <View style={styles.recordSection}>
-//           <Text style={styles.timer}>{recordTime}</Text>
-//           <TouchableOpacity
-//             style={[styles.btn, { backgroundColor: isRecording ? 'red' : 'green' }]}
-//             onPress={isRecording ? stopRecording : startRecording}
-//           >
-//             <Text style={styles.btnText}>{isRecording ? 'Stop' : 'Record'}</Text>
-//           </TouchableOpacity>
-//         </View>
-//       ) : (
-//         <View style={styles.playSection}>
-//           <Text style={styles.timer}>
-//             {playTime} / {duration}
-//           </Text>
-//           <View style={styles.controls}>
-//             <TouchableOpacity style={styles.btnSmall} onPress={seekBackward}>
-//               <Text>-5s</Text>
-//             </TouchableOpacity>
-//             <TouchableOpacity
-//               style={[styles.btn, { backgroundColor: '#555' }]}
-//               onPress={isPlaying ? stopPlay : startPlay}
-//             >
-//               <Text style={styles.btnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
-//             </TouchableOpacity>
-//             <TouchableOpacity style={styles.btnSmall} onPress={seekForward}>
-//               <Text>+5s</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       )}
-//     </View>
-//   );
-// };
-
-// export default VoiceMessage;
-
-// const styles = StyleSheet.create({
-//   container: { alignItems: 'center', margin: 15 },
-//   recordSection: { alignItems: 'center' },
-//   playSection: { alignItems: 'center' },
-//   timer: { marginBottom: 10, fontSize: 16, fontWeight: '600' },
-//   controls: { flexDirection: 'row', marginTop: 10, alignItems: 'center' },
-//   btn: {
-//     padding: 12,
-//     borderRadius: 8,
-//     minWidth: 80,
-//     alignItems: 'center',
-//   },
-//   btnText: { color: '#fff', fontWeight: 'bold' },
-//   btnSmall: {
-//     padding: 8,
-//     marginHorizontal: 8,
-//     backgroundColor: '#ddd',
-//     borderRadius: 6,
-//   },
-// });
-
 // VoiceMessage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  PermissionsAndroid, 
-  Platform,
-  Alert 
+  View, Text, TouchableOpacity, StyleSheet, Platform, Alert, Linking 
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
-// Import the library correctly - check if it's a default or named export
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+
+// Import react-native-nitro-sound correctly
+import Sound from 'react-native-nitro-sound';
+
+console.log('🎤 VoiceMessage component loaded');
+console.log('🎤 Sound import type:', typeof Sound);
+console.log('🎤 Sound methods available:', Object.getOwnPropertyNames(Sound));
 
 interface VoiceMessageProps {
   onSend?: (uri: string) => void;
@@ -207,33 +21,31 @@ interface VoiceMessageProps {
 }
 
 const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart = false }) => {
-  // Create a ref for the audio recorder player instance
-  const audioRecorderPlayerRef = useRef<any>(null);
-  
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordTime, setRecordTime] = useState('00:00');
   const [playTime, setPlayTime] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
   const [filePath, setFilePath] = useState<string | null>(null);
-  const [currentPos, setCurrentPos] = useState(0);
-  const [hasPermission, setHasPermission] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  
+  const recordingInterval = useRef<NodeJS.Timeout | null>(null);
+  const playbackInterval = useRef<NodeJS.Timeout | null>(null);
+  const soundRef = useRef<string | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const elapsedTimeRef = useRef<number>(0);
 
-  // Initialize the audio recorder player
+  // Format time to mm:ss
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Check and request permissions
   useEffect(() => {
-    // Check if the library is a constructor or has a default export
-    if (typeof AudioRecorderPlayer === 'function') {
-      audioRecorderPlayerRef.current = new AudioRecorderPlayer();
-    } else if (AudioRecorderPlayer && typeof AudioRecorderPlayer.default === 'function') {
-      // Some libraries export as { default: class }
-      audioRecorderPlayerRef.current = new AudioRecorderPlayer.default();
-    } else {
-      // If it's not a constructor, use it directly
-      audioRecorderPlayerRef.current = AudioRecorderPlayer;
-    }
-    
-    requestPermissions();
-    
+    checkPermissions();
+
     // Cleanup on unmount
     return () => {
       if (isRecording) {
@@ -242,189 +54,204 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
       if (isPlaying) {
         stopPlay();
       }
+      // Clean up Sound listeners
+      try {
+        Sound.removeRecordBackListener();
+        Sound.removePlayBackListener();
+      } catch (e) {
+        console.log('🎤 Cleanup error:', e);
+      }
     };
   }, []);
 
-  async function requestPermissions() {
-    console.log('Requesting permissions...');
-    
-    if (Platform.OS === 'android') {
-      try {
-        const grants = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-        ]);
-
-        console.log('Permission result:', grants);
-
-        const allGranted = 
-          grants['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-
-        setHasPermission(allGranted);
-        
-        if (!allGranted) {
-          Alert.alert(
-            'Permissions Required',
-            'This app needs microphone and storage permissions to record and send voice messages.',
-            [{ text: 'OK' }]
-          );
-        }
-        
-        return allGranted;
-      } catch (err) {
-        console.error('Permission request error:', err);
-        return false;
+  const checkPermissions = async () => {
+    try {
+      let permissionStatus;
+      if (Platform.OS === 'ios') {
+        permissionStatus = await request(PERMISSIONS.IOS.MICROPHONE);
+      } else {
+        permissionStatus = await request(PERMISSIONS.ANDROID.RECORD_AUDIO);
       }
+      setHasPermission(permissionStatus === RESULTS.GRANTED);
+    } catch (error) {
+      console.error('Permission error:', error);
+      setHasPermission(false);
     }
-    
-    // For iOS, permissions are handled through Info.plist
-    setHasPermission(true);
-    return true;
-  }
+  };
 
-  // 🎙️ Start recording
+  // Start recording
   const startRecording = async () => {
-    console.log('Start recording pressed');
-    
     if (!hasPermission) {
-      const granted = await requestPermissions();
-      if (!granted) {
-        console.warn('Permissions not granted for audio recording');
-        Alert.alert(
-          'Permission Denied',
-          'Cannot record audio without the required permissions.'
-        );
-        return;
-      }
-    }
-
-    try {
-      const uri = await audioRecorderPlayerRef.current.startRecorder();
-      console.log('Recording started, file path:', uri);
-      setFilePath(uri);
-      
-      audioRecorderPlayerRef.current.addRecordBackListener((e: any) => {
-        const time = audioRecorderPlayerRef.current.mmssss(Math.floor(e.currentPosition));
-        console.log('Recording progress:', time);
-        setRecordTime(time);
-        setCurrentPos(e.currentPosition);
-      });
-      
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Recording start error:', err);
-      Alert.alert('Error', 'Failed to start recording');
-    }
-  };
-
-  // ⏹️ Stop recording
-  const stopRecording = async () => {
-    console.log('Stop recording pressed');
-    try {
-      const result = await audioRecorderPlayerRef.current.stopRecorder();
-      console.log('Recording stopped, final file path:', result);
-      audioRecorderPlayerRef.current.removeRecordBackListener();
-      setIsRecording(false);
-      setFilePath(result);
-    } catch (err) {
-      console.error('Stop recording error:', err);
-    }
-  };
-
-  // Toggle recording
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
-
-  // ▶️ Play recording
-  const startPlay = async () => {
-    console.log('Play pressed');
-    if (!filePath) {
-      console.warn('No file to play');
+      Alert.alert('Permission Denied', 'Microphone permission is required to record.');
       return;
     }
 
     try {
-      await audioRecorderPlayerRef.current.startPlayer(filePath);
-      console.log('Playback started for:', filePath);
+      console.log('🎤 Starting recording with Sound singleton...');
+      
+      // Use Sound singleton directly (not as constructor)
+      // Start recording using the singleton instance
+      const recordingPath = await Sound.startRecorder();
+      console.log('🎤 Recording started at:', recordingPath);
+      
+      // Store the path for later use
+      soundRef.current = recordingPath;
+      
+      setIsRecording(true);
+      startTimeRef.current = Date.now();
+      elapsedTimeRef.current = 0;
+      
+      // Set up recording progress listener
+      Sound.addRecordBackListener((e: any) => {
+        console.log('🎤 Recording progress:', e.currentPosition);
+        const timeString = Sound.mmssss(Math.floor(e.currentPosition));
+        setRecordTime(timeString);
+        elapsedTimeRef.current = Math.floor(e.currentPosition / 1000);
+      });
+    } catch (error: any) {
+      console.error('🎤 Recording error:', error);
+      Alert.alert('Error', `Failed to start recording: ${error.message || 'Unknown error'}`);
+    }
+  };
 
-      audioRecorderPlayerRef.current.addPlayBackListener((e: any) => {
-        const cur = audioRecorderPlayerRef.current.mmssss(Math.floor(e.currentPosition));
-        const dur = audioRecorderPlayerRef.current.mmssss(Math.floor(e.duration));
-        console.log('Playing... current:', cur, ' duration:', dur);
+  // Stop recording
+  const stopRecording = async () => {
+    try {
+      console.log('🎤 Stopping recording...');
+      
+      // Stop recording using Sound singleton
+      const recordedFilePath = await Sound.stopRecorder();
+      console.log('🎤 Recording stopped, file:', recordedFilePath);
+      
+      // Remove the recording listener
+      Sound.removeRecordBackListener();
+      
+      setIsRecording(false);
+      setFilePath(recordedFilePath);
+      setDuration(formatTime(elapsedTimeRef.current));
+      
+      // Set the file path for playback
+      soundRef.current = recordedFilePath;
+      
+      // Set duration based on recording time
+      setDuration(formatTime(elapsedTimeRef.current));
 
-        setPlayTime(cur);
-        setDuration(dur);
-        setCurrentPos(e.currentPosition);
+    } catch (error: any) {
+      console.error('🎤 Stop recording error:', error);
+      Alert.alert('Error', `Failed to stop recording: ${error.message || 'Unknown error'}`);
+    }
+  };
 
+  // Start playback
+  const startPlay = async () => {
+    if (!filePath) {
+      Alert.alert('Error', 'No recording available to play.');
+      return;
+    }
+
+    try {
+      console.log('🎤 Starting playback for:', filePath);
+      
+      // Set up playback progress listener
+      Sound.addPlayBackListener((e: any) => {
+        console.log('🎤 Playback progress:', e.currentPosition, e.duration);
+        const currentTime = Sound.mmssss(Math.floor(e.currentPosition));
+        const totalDuration = Sound.mmssss(Math.floor(e.duration));
+        setPlayTime(currentTime);
+        setDuration(totalDuration);
+        
+        // Check if playback finished
         if (e.currentPosition >= e.duration) {
-          console.log('Playback finished');
+          console.log('🎤 Playback finished');
           stopPlay();
         }
       });
       
+      // Start playing the recorded file
+      await Sound.startPlayer(filePath);
       setIsPlaying(true);
-    } catch (err) {
-      console.error('Playback error:', err);
-      Alert.alert('Error', 'Failed to play recording');
+    } catch (error: any) {
+      console.error('🎤 Playback error:', error);
+      Alert.alert('Error', `Failed to play recording: ${error.message || 'Unknown error'}`);
     }
   };
 
-  // ⏸️ Stop playing
+  // Stop playback
   const stopPlay = async () => {
-    console.log('Stop playback pressed');
     try {
-      await audioRecorderPlayerRef.current.stopPlayer();
-      audioRecorderPlayerRef.current.removePlayBackListener();
+      console.log('🎤 Stopping playback...');
+      await Sound.stopPlayer();
+      Sound.removePlayBackListener();
       setIsPlaying(false);
       setPlayTime('00:00');
-    } catch (err) {
-      console.error('Stop playback error:', err);
+    } catch (error: any) {
+      console.error('🎤 Stop playback error:', error);
     }
   };
 
-  // Toggle playback
-  const togglePlayback = () => {
+  // Pause playback
+  const pausePlay = async () => {
+    try {
+      console.log('🎤 Pausing playback...');
+      await Sound.pausePlayer();
+      setIsPlaying(false);
+    } catch (error: any) {
+      console.error('🎤 Pause playback error:', error);
+    }
+  };
+
+  // Toggle playback (play/pause)
+  const togglePlayback = async () => {
     if (isPlaying) {
-      stopPlay();
+      await pausePlay();
     } else {
-      startPlay();
+      await startPlay();
     }
   };
 
-  // ⏩ Forward
+  // Seek forward/backward
   const seekForward = async () => {
-    console.log('Seek forward +5s');
     try {
-      await audioRecorderPlayerRef.current.seekToPlayer(currentPos + 5000);
-    } catch (err) {
-      console.error('Seek forward error:', err);
+      console.log('🎤 Seeking forward 5 seconds...');
+      // Note: Seeking might not be available in all versions
+      // This is a placeholder - check if seekToPlayer exists
+      if (Sound.seekToPlayer) {
+        await Sound.seekToPlayer(5000); // 5 seconds in milliseconds
+      }
+    } catch (error: any) {
+      console.error('🎤 Seek forward error:', error);
     }
   };
 
-  // ⏪ Backward
   const seekBackward = async () => {
-    console.log('Seek backward -5s');
     try {
-      await audioRecorderPlayerRef.current.seekToPlayer(Math.max(0, currentPos - 5000));
-    } catch (err) {
-      console.error('Seek backward error:', err);
+      console.log('🎤 Seeking backward 5 seconds...');
+      // Note: Seeking might not be available in all versions
+      if (Sound.seekToPlayer) {
+        await Sound.seekToPlayer(-5000); // -5 seconds in milliseconds
+      }
+    } catch (error: any) {
+      console.error('🎤 Seek backward error:', error);
     }
   };
 
-  // Send the recording
+  // Handle mic button
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else if (!filePath) {
+      startRecording();
+    }
+  };
+
+  // Send recording
   const handleSend = () => {
     if (filePath && onSend) {
-      console.log("Sending file:", filePath);
+      console.log('🎤 Sending recording:', filePath);
       onSend(filePath);
       resetState();
+    } else {
+      Alert.alert('Error', 'No recording to send.');
     }
   };
 
@@ -434,89 +261,173 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
       stopPlay();
     }
     resetState();
-    startRecording();
   };
 
-  // Reset component state
-  const resetState = () => {
+  // Reset state
+  const resetState = async () => {
+    console.log('🎤 Resetting state...');
+    
+    // Stop any ongoing operations
+    if (isRecording) {
+      try {
+        await Sound.stopRecorder();
+        Sound.removeRecordBackListener();
+      } catch (e) {
+        console.log('🎤 Error stopping recorder during reset:', e);
+      }
+    }
+    
+    if (isPlaying) {
+      try {
+        await Sound.stopPlayer();
+        Sound.removePlayBackListener();
+      } catch (e) {
+        console.log('🎤 Error stopping player during reset:', e);
+      }
+    }
+    
+    soundRef.current = null;
     setFilePath(null);
+    setIsRecording(false);
     setIsPlaying(false);
     setRecordTime('00:00');
     setPlayTime('00:00');
     setDuration('00:00');
-    setCurrentPos(0);
+    elapsedTimeRef.current = 0;
   };
 
   // Cancel
   const handleCancel = () => {
     if (isRecording) {
       stopRecording();
-    } else if (isPlaying) {
+    }
+    if (isPlaying) {
       stopPlay();
     }
     resetState();
-    if (onCancel) {
-      onCancel();
+    onCancel?.();
+  };
+
+  // Request permission
+  const requestPermission = async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        const result = await request(PERMISSIONS.IOS.MICROPHONE);
+        setHasPermission(result === RESULTS.GRANTED);
+      } else {
+        const result = await request(PERMISSIONS.ANDROID.RECORD_AUDIO);
+        setHasPermission(result === RESULTS.GRANTED);
+      }
+    } catch (error) {
+      console.error('Permission request error:', error);
     }
   };
 
-  // Auto-start recording if prop is set
-  useEffect(() => {
-    if (autoStart && hasPermission) {
-      startRecording();
-    }
-  }, [autoStart, hasPermission]);
+  // Show permission UI if needed
+  if (hasPermission === false) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Icon name="mic-off" size={48} color="#ff6b6b" />
+          <Text style={styles.permissionText}>Microphone Access Required</Text>
+          <Text style={styles.permissionSubtext}>
+            Please allow microphone access to record voice messages
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionButton}
+            onPress={requestPermission}
+          >
+            <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       {!filePath ? (
+        // Recording UI
         <View style={styles.recordSection}>
-          <Text style={styles.timer}>{recordTime}</Text>
+          <View style={styles.timerContainer}>
+            <Icon name="mic" size={24} color={isRecording ? '#ff4444' : '#666'} />
+            <Text style={styles.timer}>{recordTime}</Text>
+            {isRecording && (
+              <View style={styles.recordingIndicator}>
+                <View style={styles.pulseDot} />
+                <Text style={styles.recordingText}>Recording...</Text>
+              </View>
+            )}
+          </View>
+
           <TouchableOpacity
-            style={[styles.btn, { backgroundColor: isRecording ? 'red' : 'green' }]}
-            onPress={toggleRecording}
-            disabled={!hasPermission}
+            style={[
+              styles.recordButton,
+              { backgroundColor: isRecording ? '#ff4444' : '#4CAF50' }
+            ]}
+            onPress={handleMicClick}
           >
-            <Text style={styles.btnText}>{isRecording ? 'Stop Recording' : 'Start Recording'}</Text>
+            <Icon name="mic" size={36} color="white" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnCancel} onPress={handleCancel}>
-            <Text style={styles.btnText}>Cancel</Text>
+
+          <Text style={styles.instructionText}>
+            {isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
+          </Text>
+
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Icon name="close" size={20} color="white" />
+            <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
-          
-          {!hasPermission && (
-            <Text style={styles.permissionText}>
-              Microphone permission is required to record audio
-            </Text>
-          )}
         </View>
       ) : (
+        // Playback UI
         <View style={styles.playSection}>
-          <Text style={styles.timer}>
-            {playTime} / {duration}
-          </Text>
-          <View style={styles.controls}>
-            <TouchableOpacity style={styles.btnSmall} onPress={seekBackward}>
-              <Text style={styles.btnSmallText}>-5s</Text>
+          <View style={styles.recordingInfo}>
+            <Icon name="checkmark-circle" size={24} color="#28a745" />
+            <Text style={styles.recordingCompleteText}>Recording Complete</Text>
+          </View>
+
+          <View style={styles.timerContainer}>
+            <Icon name="musical-notes" size={24} color="#666" />
+            <Text style={styles.timer}>
+              {playTime} / {duration}
+            </Text>
+          </View>
+
+          <View style={styles.playbackControls}>
+            <TouchableOpacity style={styles.controlButton} onPress={seekBackward}>
+              <Icon name="play-back" size={24} color="#333" />
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#555' }]}
+              style={[
+                styles.playButton,
+                { backgroundColor: isPlaying ? '#ff9800' : '#2196F3' }
+              ]}
               onPress={togglePlayback}
             >
-              <Text style={styles.btnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+              <Icon name={isPlaying ? 'pause' : 'play'} size={32} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnSmall} onPress={seekForward}>
-              <Text style={styles.btnSmallText}>+5s</Text>
+
+            <TouchableOpacity style={styles.controlButton} onPress={seekForward}>
+              <Icon name="play-forward" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.btnSend} onPress={handleSend}>
-              <Text style={styles.btnText}>Send</Text>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+              <Icon name="send" size={20} color="white" />
+              <Text style={styles.actionText}>Send</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnRerecord} onPress={handleRerecord}>
-              <Text style={styles.btnText}>Re-record</Text>
+
+            <TouchableOpacity style={styles.rerecordButton} onPress={handleRerecord}>
+              <Icon name="refresh" size={20} color="white" />
+              <Text style={styles.actionText}>Re-record</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnCancel} onPress={handleCancel}>
-              <Text style={styles.btnText}>Cancel</Text>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+              <Icon name="close" size={20} color="white" />
+              <Text style={styles.actionText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -525,120 +436,214 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
   );
 };
 
-export default VoiceMessage;
-
+// Keep your existing styles from the previous implementation
 const styles = StyleSheet.create({
-  container: { 
-    alignItems: 'center', 
-    margin: 15, 
+  container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 200,
+  },
+  permissionContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
-  recordSection: { 
-    alignItems: 'center',
-    width: '100%',
-  },
-  playSection: { 
-    alignItems: 'center',
-    width: '100%',
-  },
-  timer: { 
-    marginBottom: 20, 
-    fontSize: 24, 
-    fontWeight: '600',
-    color: '#333',
-  },
-  controls: { 
-    flexDirection: 'row', 
-    marginTop: 20, 
-    marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btn: {
-    padding: 15,
-    borderRadius: 8,
-    minWidth: 120,
-    alignItems: 'center',
-    marginHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  btnText: { 
-    color: '#fff', 
+  permissionText: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#495057',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  permissionSubtext: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  permissionButton: {
+    backgroundColor: '#4263eb',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  permissionButtonText: {
+    color: 'white',
+    fontWeight: '600',
     fontSize: 16,
   },
-  btnSmall: {
-    padding: 10,
-    marginHorizontal: 8,
-    backgroundColor: '#ddd',
-    borderRadius: 6,
-    minWidth: 60,
+  recordSection: {
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    width: '100%',
   },
-  btnSmallText: {
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  btnCancel: {
-    padding: 12,
-    borderRadius: 8,
-    minWidth: 100,
+  playSection: {
     alignItems: 'center',
-    backgroundColor: '#6c757d',
-    marginTop: 15,
+    width: '100%',
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
-  actionButtons: {
+  timer: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  recordButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  playButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  instructionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  playbackControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  controlButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#e9ecef',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    marginTop: 20,
+    paddingHorizontal: 10,
   },
-  btnSend: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#007bff',
+  sendButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 80,
+    backgroundColor: '#28a745',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
   },
-  btnRerecord: {
-    padding: 12,
-    borderRadius: 8,
+  rerecordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fd7e14',
-    alignItems: 'center',
-    minWidth: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
   },
-  permissionText: {
-    marginTop: 15,
-    color: '#dc3545',
-    textAlign: 'center',
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6c757d',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  actionText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 6,
     fontSize: 14,
   },
+  cancelText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 6,
+    fontSize: 14,
+  },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 15,
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ff4444',
+    marginRight: 8,
+  },
+  recordingText: {
+    color: '#ff4444',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recordingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#d4edda',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  recordingCompleteText: {
+    color: '#28a745',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });
+
+export default VoiceMessage;
