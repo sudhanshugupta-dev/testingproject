@@ -30,11 +30,6 @@ export const getOrCreateChatRoom = async (
   userId2: string,
 ): Promise<string> => {
   try {
-    // Prevent self-chat
-    if (userId1 === userId2) {
-      throw new Error("Cannot create chat room with yourself");
-    }
-
     console.log("Creating/getting chat room for users:", userId1, userId2);
     
     // Generate consistent room ID (sorted to ensure same room for both users)
@@ -98,31 +93,47 @@ const ensureChatEntries = async (
     const user1Data = user1Doc.exists ? user1Doc.data() : {};
     const user2Data = user2Doc.exists ? user2Doc.data() : {};
     
-    // Create chat entry for user1
-    const user1ChatRef = firestore().collection('chats').doc(`${userId1}_${roomId}`);
-    batch.set(user1ChatRef, {
-      roomId,
-      participants: [userId1, userId2],
-      lastMessage: '',
-      lastMessageAt: null,
-      name: (user2Data as any)?.name || (user2Data as any)?.email || 'Unknown',
-      avatar: (user2Data as any)?.avatar || null,
-      unreadCount: 0,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-    
-    // Create chat entry for user2
-    const user2ChatRef = firestore().collection('chats').doc(`${userId2}_${roomId}`);
-    batch.set(user2ChatRef, {
-      roomId,
-      participants: [userId1, userId2],
-      lastMessage: '',
-      lastMessageAt: null,
-      name: (user1Data as any)?.name || (user1Data as any)?.email || 'Unknown',
-      avatar: (user1Data as any)?.avatar || null,
-      unreadCount: 0,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    // Handle self-chat case
+    if (userId1 === userId2) {
+      // Create single chat entry for self-chat
+      const selfChatRef = firestore().collection('chats').doc(`${userId1}_${roomId}`);
+      batch.set(selfChatRef, {
+        roomId,
+        participants: [userId1],
+        lastMessage: '',
+        lastMessageAt: null,
+        name: `${(user1Data as any)?.name || (user1Data as any)?.email || 'Unknown'} (You)`,
+        avatar: (user1Data as any)?.avatar || null,
+        unreadCount: 0,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } else {
+      // Create chat entry for user1
+      const user1ChatRef = firestore().collection('chats').doc(`${userId1}_${roomId}`);
+      batch.set(user1ChatRef, {
+        roomId,
+        participants: [userId1, userId2],
+        lastMessage: '',
+        lastMessageAt: null,
+        name: (user2Data as any)?.name || (user2Data as any)?.email || 'Unknown',
+        avatar: (user2Data as any)?.avatar || null,
+        unreadCount: 0,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      
+      // Create chat entry for user2
+      const user2ChatRef = firestore().collection('chats').doc(`${userId2}_${roomId}`);
+      batch.set(user2ChatRef, {
+        roomId,
+        participants: [userId1, userId2],
+        lastMessage: '',
+        lastMessageAt: null,
+        name: (user1Data as any)?.name || (user1Data as any)?.email || 'Unknown',
+        avatar: (user1Data as any)?.avatar || null,
+        unreadCount: 0,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     
     await batch.commit();
     console.log('Chat entries created for room:', roomId);
@@ -164,8 +175,9 @@ const listenToChatForFriend = (
   if (!userId) return;
 
   const roomId = getRoomId(userId, friendId);
+  const isSelfChat = userId === friendId;
 
-  // 1. Listen to friend profile
+  // 1. Listen to friend profile (or self profile for self-chat)
   const userUnsub = firestore()
     .collection('users')
     .doc(friendId)
@@ -186,37 +198,46 @@ const listenToChatForFriend = (
         .onSnapshot(lastMsgSnap => {
           const lastMsg = lastMsgSnap.docs[0]?.data();
 
-          // 3. Count unseen messages
-          firestore()
-            .collection('rooms')
-            .doc(roomId)
-            .collection('messages')
-            .where('receiverId', '==', userId)   // ⚠️ do you store receiverId in message doc? (not in screenshot)
-            .where('status', '!=', 'seen')       // adjust according to your status field
-            .onSnapshot(unseenSnap => {
-              const unseenCount = unseenSnap?.size ?? 0; // safe access
+          // 3. Count unseen messages - for self-chat, count messages where seenBy[userId] is false
+          const unseenQuery = isSelfChat 
+            ? firestore()
+                .collection('rooms')
+                .doc(roomId)
+                .collection('messages')
+                .where(`seenBy.${userId}`, '==', false)
+            : firestore()
+                .collection('rooms')
+                .doc(roomId)
+                .collection('messages')
+                .where('receiverId', '==', userId)
+                .where('status', '!=', 'seen');
 
-              const chatItem: ChatItem = {
-                id: friendDoc.id,
-                name: friendData.name || 'Unknown',
-                email: friendData.email || 'No email',
-                avatar: friendData.avatar || null,
-                roomId,
-                lastMessage: lastMsg
-                  ? {
-                      text: lastMsg.text || '',
+          unseenQuery.onSnapshot(unseenSnap => {
+            const unseenCount = unseenSnap?.size ?? 0;
+
+            const chatItem: ChatItem = {
+              id: friendDoc.id,
+              name: isSelfChat 
+                ? `${friendData.name || friendData.email || 'Unknown'} (You)` 
+                : friendData.name || 'Unknown',
+              email: friendData.email || 'No email',
+              avatar: friendData.avatar || null,
+              roomId,
+              lastMessage: lastMsg
+                ? {
+                    text: lastMsg.text || '',
                     timestamp: lastMsg?.createdAt ? lastMsg.createdAt.toDate().getTime() : null,
-                      senderId: lastMsg.senderId || null,
-                      isSeen: lastMsg.status === 'true',
-                      messageType: lastMsg.messageType || 'text',
-                      seenBy: lastMsg.seenBy,
-                    }
-                  : null,
-                unseenCount,
-              };
-              console.log("final answer", chatItem)
-              callback(chatItem);
-            });
+                    senderId: lastMsg.senderId || null,
+                    isSeen: lastMsg.status === 'true',
+                    messageType: lastMsg.messageType || 'text',
+                    seenBy: lastMsg.seenBy,
+                  }
+                : null,
+              unseenCount,
+            };
+            console.log("final answer", chatItem)
+            callback(chatItem);
+          });
         });
     });
 

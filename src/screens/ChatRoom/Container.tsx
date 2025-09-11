@@ -252,10 +252,6 @@ const ChatRoomContainer = () => {
       return;
     }
 
-    if (myId === friendId) {
-      setError("Cannot chat with yourself");
-      return;
-    }
 
     const initializeChat = async () => {
       try {
