@@ -33,7 +33,7 @@ import CustomAvatar from "../../components/CustomAvatar";
 import ReplyMessageBar from "../../components/ReplyMessageBar";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
-import { useAppTheme } from "../../themes/useTheme";
+import { useAppTheme } from "../../themes";
 import { useTranslation } from "react-i18next";
 import Icon from "react-native-vector-icons/Ionicons";
 import PickerBottomSheet from "../../components/PickerBottomSheet";

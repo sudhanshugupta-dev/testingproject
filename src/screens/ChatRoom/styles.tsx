@@ -1,5 +1,10 @@
 import { StyleSheet } from 'react-native';
-export const styles = StyleSheet.create({
+import { getThemeColors } from '../../themes';
+
+// Create theme-aware styles function
+export const createStyles = (mode: 'light' | 'dark') => {
+  const colors = getThemeColors(mode);
+  return StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -15,23 +20,23 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#fff',
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.card,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     maxHeight: 100,
   },
   sendBtn: {
     marginLeft: 10,
-    backgroundColor: '#4F46E5',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -39,10 +44,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendBtnDisabled: {
-    backgroundColor: '#A5B4FC',
+    backgroundColor: colors.disabled,
   },
   sendText: {
-    color: '#fff',
+    color: colors.background,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -54,7 +59,7 @@ export const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: '#EF4444',
+    color: colors.danger,
     textAlign: 'center',
   },
   emptyContainer: {
@@ -65,7 +70,11 @@ export const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
-});
+  });
+};
+
+// Backward compatibility - default light theme styles
+export const styles = createStyles('light');
