@@ -14,6 +14,7 @@ import {
   Animated,
   Alert,
   ScrollView,
+  Keyboard,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -34,6 +35,7 @@ import ReplyMessageBar from "../../components/ReplyMessageBar";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { useAppTheme } from "../../themes";
+import { createStyles } from "./styles";
 import { useTranslation } from "react-i18next";
 import Icon from "react-native-vector-icons/Ionicons";
 import PickerBottomSheet from "../../components/PickerBottomSheet";
@@ -55,8 +57,10 @@ const getRoomCacheKey = (myId: string, friendId: string) => `chat_room_${myId}_$
 // Reply swipe action
 const LeftAction = memo(function LeftAction({
   progress,
+  styles,
 }: {
   progress: Animated.AnimatedInterpolation<number>;
+  styles: any;
 }) {
   const translateX = progress.interpolate({
     inputRange: [0, 1],
@@ -106,10 +110,26 @@ const ChatRoomContainer = () => {
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<Map<string, any>>(new Map());
 
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const openRowRef = useRef<Swipeable | null>(null);
+
+  // Keyboard event listeners to hide bottom sheets and modals
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      // Hide all bottom sheets and modals when keyboard opens
+      if (visible) setVisible(false);
+      if (modalVisible) setModalVisible(false);
+      if (forwardBottomSheetVisible) setForwardBottomSheetVisible(false);
+      if (mediaPickerVisible) setMediaPickerVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+    };
+  }, [visible, modalVisible, forwardBottomSheetVisible, mediaPickerVisible]);
 
   // Helper functions for optimistic messages
   const addOptimisticMessage = useCallback((tempId: string, message: any) => {
@@ -727,7 +747,7 @@ const ChatRoomContainer = () => {
           leftThreshold={ACTION_WIDTH * 0.5}
           overshootLeft={false}
           overshootFriction={1}
-          renderLeftActions={(progress) => <LeftAction progress={progress} />}
+          renderLeftActions={(progress) => <LeftAction progress={progress} styles={styles} />}
           onSwipeableWillOpen={() => {
             if (openRowRef.current && openRowRef.current !== rowRef) {
               openRowRef.current.close();
@@ -769,11 +789,7 @@ const ChatRoomContainer = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => nav.goBack()}>
@@ -882,46 +898,51 @@ const ChatRoomContainer = () => {
               </ScrollView>
             )}
 
-            {/* Input row */}
-            <View style={[styles.inputRow, { borderTopColor: colors.text + "22" }]}>
-              <TouchableOpacity
-                onPress={() => setVisible(true)}
-                style={styles.attachButton}
-              >
-                <Icon name="add-circle-outline" size={30} color={colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setMediaPickerVisible(true)}
-                style={styles.attachButton}
-              >
-                <Icon name="happy-outline" size={30} color={colors.primary} />
-              </TouchableOpacity>
-              {isVoiceMode ? (
-                <VoiceMessage
-                  onSend={handleVoiceSend}
-                  onCancel={() => setIsVoiceMode(false)}
-                />
-              ) : (
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
-                  value={text}
-                  onChangeText={setText}
-                  placeholder={t("chat.typeMessage")}
-                  placeholderTextColor="#999"
-                  multiline
-                />
-              )}
-              <TouchableOpacity
-                style={[
-                  styles.sendBtn,
-                  { backgroundColor: (showSend || isVoiceMode) ? colors.primary : colors.text + "33" },
-                ]}
-                onPress={onSend}
-                disabled={false}
-              >
-                <Icon name={showSend ? "send" : "mic"} size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            {/* Input Row - Fixed position */}
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            >
+              <View style={[styles.inputRow, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={() => setVisible(true)}
+                >
+                  <Icon name="attach" size={30} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={() => setMediaPickerVisible(true)}
+                >
+                  <Icon name="happy-outline" size={30} color={colors.primary} />
+                </TouchableOpacity>
+                {isVoiceMode ? (
+                  <VoiceMessage
+                    onSend={handleVoiceSend}
+                    onCancel={() => setIsVoiceMode(false)}
+                  />
+                ) : (
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
+                    value={text}
+                    onChangeText={setText}
+                    placeholder={t("chat.typeMessage")}
+                    placeholderTextColor="#999"
+                    multiline
+                  />
+                )}
+                <TouchableOpacity
+                  style={[
+                    styles.sendBtn,
+                    { backgroundColor: (showSend || isVoiceMode) ? colors.primary : colors.text + "33" },
+                  ]}
+                  onPress={onSend}
+                  disabled={false}
+                >
+                  <Icon name={showSend ? "send" : "mic"} size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
 
             <PickerBottomSheet
               visible={visible}
@@ -1004,121 +1025,14 @@ const ChatRoomContainer = () => {
           }}
           messageToForward={messageToForward}
           onForwardComplete={(selectedFriends) => {
-            console.log('Message forwarded to:', selectedFriends);
             setForwardBottomSheetVisible(false);
             setMessageToForward(null);
           }}
         />
-      </KeyboardAvoidingView>
+      </View>
     </GestureHandlerRootView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-  },
-  headerTextContainer: { marginLeft: 12, flex: 1 },
-  friendName: { fontSize: 18, fontWeight: "700" },
-  roomInfo: { fontSize: 12, marginTop: 2 },
-  loadingContainer: { padding: 20, alignItems: "center" },
-  loadingText: { marginTop: 10, fontSize: 14 },
-  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  errorText: { fontSize: 16, textAlign: "center", marginBottom: 20 },
-  retryButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  retryButtonText: { color: "#fff", fontWeight: "600" },
-  messageListContent: { padding: 12, flexGrow: 1 },
-  separatorContainer: { alignItems: "center", marginVertical: 10 },
-  separatorText: { fontSize: 14, fontWeight: "600" },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-    borderTopWidth: 1,
-    minHeight: 60,
-  },
-  input: {
-    flex: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 8,
-    maxHeight: 100,
-  },
-  sendBtn: { borderRadius: 12, padding: 10 },
-  attachButton: { padding: 8 },
-  leftAction: {
-    backgroundColor: "#007AFF",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    marginVertical: 4,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  leftActionLabel: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  swipeableContainer: {
-    marginVertical: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBox: {
-    width: "80%",
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: "60%",
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  cancelItem: {
-    borderBottomWidth: 0,
-    marginTop: 8,
-  },
-  modalText: { marginLeft: 10, fontSize: 16, fontWeight: "500" },
-  mediaPreviewContainer: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    maxHeight: 100,
-  },
-  mediaPreviewItem: {
-    marginRight: 8,
-    position: "relative",
-  },
-  mediaPreviewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  removeMediaButton: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 12,
-    padding: 2,
-  },
-});
 
 export default ChatRoomContainer;

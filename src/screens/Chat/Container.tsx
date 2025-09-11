@@ -22,12 +22,14 @@ import {
 
 import CustomAvatar from '../../components/CustomAvatar';
 import { useAppTheme } from '../../themes/useTheme';
+import { createStyles } from './styles';
 
 const ChatContainer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const nav = useNavigation<any>();
   const { t } = useTranslation();
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
 
   const { list, loading } = useSelector((s: RootState) => s.chats);
   const myId = useSelector((s: RootState) => s.auth.user?.uid);
@@ -234,55 +236,5 @@ const ChatContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  searchBar: {
-    padding: 10,
-    borderBottomWidth: 1,
-  },
-  searchInput: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-    fontSize: 16,
-  },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-  },
-  name: { fontWeight: '600', fontSize: 16 },
-  last: { marginTop: 4, fontSize: 14 },
-
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 80,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-});
 
 export default ChatContainer;

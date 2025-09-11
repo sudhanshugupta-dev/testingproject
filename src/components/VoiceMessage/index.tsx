@@ -417,7 +417,7 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
               <Icon name="send" size={20} color="white" />
-              <Text style={styles.actionText}>Send</Text>
+              {/* <Text style={styles.actionText}>Send</Text> */}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.rerecordButton} onPress={handleRerecord}>
@@ -427,7 +427,7 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
 
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
               <Icon name="close" size={20} color="white" />
-              <Text style={styles.actionText}>Cancel</Text>
+              {/* <Text style={styles.actionText}>Cancel</Text> */}
             </TouchableOpacity>
           </View>
         </View>
@@ -557,13 +557,13 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 10,
+   // paddingHorizontal: 10,
   },
   sendButton: {
     flexDirection: 'row',
-    alignItems: 'center',
+    //alignItems: 'center',
     backgroundColor: '#28a745',
     paddingHorizontal: 16,
     paddingVertical: 12,

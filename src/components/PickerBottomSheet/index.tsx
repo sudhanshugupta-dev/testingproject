@@ -11,6 +11,7 @@ import {
 import Modal from "react-native-modal";
 import { launchImageLibrary, launchCamera, Asset } from "react-native-image-picker";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useAppTheme } from "../../themes";
 
 type Props = {
   visible: boolean;
@@ -20,6 +21,9 @@ type Props = {
 };
 
 const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult, testID }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+  
   /**
    * Request gallery permission for Android
    */
@@ -159,40 +163,40 @@ const PickerBottomSheet: React.FC<Props> = ({ visible, onClose, onResult, testID
         </View>
 
         <TouchableOpacity style={styles.option} onPress={pickMedia}>
-          <Icon name="image-multiple-outline" size={24} color="#4A90E2" />
+          <Icon name="image-multiple-outline" size={24} color={colors.primary} />
           <Text style={styles.optionText}>Pick Image / Video</Text>
-          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
+          <Icon name="chevron-right" size={20} color={colors.textSecondary} style={styles.arrow} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.option} onPress={takePhoto}>
-          <Icon name="camera" size={24} color="#50C878" />
+          <Icon name="camera" size={24} color={colors.success || "#50C878"} />
           <Text style={styles.optionText}>Take Photo</Text>
-          <Icon name="chevron-right" size={20} color="#999" style={styles.arrow} />
+          <Icon name="chevron-right" size={20} color={colors.textSecondary} style={styles.arrow} />
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.option, styles.cancel]} onPress={onClose}>
-          <Icon name="close-circle-outline" size={24} color="#E94E4E" />
-          <Text style={[styles.optionText, { color: "#E94E4E" }]}>Cancel</Text>
+          <Icon name="close-circle-outline" size={24} color={colors.danger || "#E94E4E"} />
+          <Text style={[styles.optionText, { color: colors.danger || "#E94E4E" }]}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   modal: {
     justifyContent: "flex-end",
     margin: 0,
   },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     paddingTop: 8,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -204,27 +208,27 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: "#ddd",
+    backgroundColor: colors.border,
     borderRadius: 2,
     marginBottom: 8,
   },
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: colors.text,
   },
   option: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: colors.border,
   },
   optionText: {
     fontSize: 16,
     fontWeight: "500",
     marginLeft: 12,
-    color: "#333",
+    color: colors.text,
     flex: 1,
   },
   arrow: {
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: colors.border,
     paddingTop: 20,
   },
 });
