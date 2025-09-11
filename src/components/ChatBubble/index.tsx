@@ -12,6 +12,7 @@ import GifRenderer from './GifRenderer';
 import VideoRenderer from './VideoRenderer';
 import MediaPreviewModal from '../MediaPreviewModal/MediaPreviewModal';
 import VoiceMessageBubble from '../VoiceMessageBubble';
+import LoadingIndicator from '../LoadingIndicator/LoadingIndicator';
 
 interface MediaItem {
   uri: string;
@@ -33,6 +34,9 @@ interface ChatBubbleProps {
   onLongPress?: () => void;
   currentUserId?: string;
   testID?: string;
+  isUploading?: boolean;
+  uploadProgress?: number;
+  uploadError?: string;
 }
 
 const formatTime = (timestamp?: number): string => {
@@ -51,6 +55,9 @@ const ChatBubble = ({
   onLongPress,
   currentUserId,
   testID,
+  isUploading = false,
+  uploadProgress,
+  uploadError,
 }: ChatBubbleProps) => {
   const { colors } = useTheme();
 
@@ -91,6 +98,21 @@ const ChatBubble = ({
   };
 
   const renderMedia = () => {
+    // Show loading indicator if uploading
+    if (isUploading && (!media || media.length === 0)) {
+      const loadingType = messageType === 'voice' ? 'voice' : 
+                         messageType === 'video' ? 'video' :
+                         messageType === 'gif' ? 'image' : 'image';
+      return (
+        <LoadingIndicator 
+          type={loadingType}
+          progress={uploadProgress}
+          size="medium"
+          showText={true}
+        />
+      );
+    }
+
     if (!media || media.length === 0) return null;
 
     // Separate media by type
@@ -133,6 +155,18 @@ const ChatBubble = ({
 
     return (
       <View style={styles.mediaContainer}>
+        {/* Show loading overlay if still uploading */}
+        {isUploading && (
+          <View style={styles.uploadingOverlay}>
+            <LoadingIndicator 
+              type={messageType === 'voice' ? 'voice' : 'image'}
+              progress={uploadProgress}
+              size="small"
+              showText={false}
+            />
+          </View>
+        )}
+        
         {/* Render GIFs */}
         {gifs.length > 0 && (
           <GifRenderer media={gifs} onPreview={setPreviewMedia} />
@@ -254,6 +288,15 @@ const ChatBubble = ({
 
             {/* Media content */}
             {renderMedia()}
+
+            {/* Error display */}
+            {uploadError && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>
+                  Upload failed: {uploadError}
+                </Text>
+              </View>
+            )}
 
             {/* Text content - show for all messages except pure GIFs */}
             {text && messageType !== "gif" && (
@@ -394,6 +437,29 @@ const styles = StyleSheet.create({
   },
   fullImage: { width: "100%", height: "100%" },
   fullVideo: { width: "100%", height: "100%" },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    borderColor: 'rgba(255, 0, 0, 0.3)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    margin: 4,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
 });
 
 export default ChatBubble;
