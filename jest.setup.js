@@ -42,4 +42,27 @@ jest.mock('@react-native-firebase/firestore', () => {
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { changeLanguage: () => new Promise(() => {}) } }),
   initReactI18next: { type: '3rdParty', init: () => {} },
+}));
+
+jest.mock('react-native-nitro-sound', () => ({
+  startRecorder: jest.fn().mockResolvedValue('test-recording-path'),
+  stopRecorder: jest.fn().mockResolvedValue('test-recording-path'),
+  startPlayer: jest.fn().mockResolvedValue('test-playback-path'),
+  stopPlayer: jest.fn().mockResolvedValue('test-playback-path'),
+  pausePlayer: jest.fn().mockResolvedValue('test-pause-path'),
+  seekToPlayer: jest.fn().mockResolvedValue('test-seek-path'),
+  addRecordBackListener: jest.fn(),
+  removeRecordBackListener: jest.fn(),
+  addPlayBackListener: jest.fn(),
+  removePlayBackListener: jest.fn(),
+  mmssss: jest.fn((time) => `00:${time.toString().padStart(2, '0')}`),
+}));
+
+jest.mock('react-native-permissions', () => ({
+  request: jest.fn().mockResolvedValue('granted'),
+  PERMISSIONS: {
+    IOS: { MICROPHONE: 'ios.permission.MICROPHONE' },
+    ANDROID: { RECORD_AUDIO: 'android.permission.RECORD_AUDIO' },
+  },
+  RESULTS: { GRANTED: 'granted' },
 })); 

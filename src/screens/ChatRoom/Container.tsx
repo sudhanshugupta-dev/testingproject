@@ -104,11 +104,46 @@ const ChatRoomContainer = () => {
   const [forwardBottomSheetVisible, setForwardBottomSheetVisible] = useState(false);
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+  const [optimisticMessages, setOptimisticMessages] = useState<Map<string, any>>(new Map());
 
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const openRowRef = useRef<Swipeable | null>(null);
+
+  // Helper functions for optimistic messages
+  const addOptimisticMessage = useCallback((tempId: string, message: any) => {
+    setOptimisticMessages(prev => new Map(prev.set(tempId, message)));
+  }, []);
+
+  const updateOptimisticMessage = useCallback((tempId: string, updates: any) => {
+    setOptimisticMessages(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(tempId);
+      if (existing) {
+        newMap.set(tempId, { ...existing, ...updates });
+      }
+      return newMap;
+    });
+  }, []);
+
+  const removeOptimisticMessage = useCallback((tempId: string) => {
+    setOptimisticMessages(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(tempId);
+      return newMap;
+    });
+  }, []);
+
+  // Combine real messages with optimistic messages
+  const getAllMessages = useCallback(() => {
+    const optimisticArray = Array.from(optimisticMessages.values());
+    return [...messages, ...optimisticArray].sort((a, b) => {
+      const aTime = a.createdAt?.toString ? Number(a.createdAt) : (a.createdAt as number) || 0;
+      const bTime = b.createdAt?.toString ? Number(b.createdAt) : (b.createdAt as number) || 0;
+      return bTime - aTime; // Descending order (newest first)
+    });
+  }, [messages, optimisticMessages]);
 
   // Group messages with date separators (for descending order)
   const getMessagesWithSeparators = useCallback((msgs: Message[]) => {
@@ -241,6 +276,22 @@ const ChatRoomContainer = () => {
         id: m.id || `${m.senderId}-${m.createdAt}`,
       }));
       
+      // Remove optimistic messages that match real messages
+      setOptimisticMessages(prev => {
+        const newMap = new Map(prev);
+        processed.forEach(realMsg => {
+          // Remove optimistic messages that have the same content and sender
+          for (const [tempId, optimisticMsg] of newMap.entries()) {
+            if (optimisticMsg.senderId === realMsg.senderId &&
+                optimisticMsg.text === realMsg.text &&
+                Math.abs((optimisticMsg.createdAt || 0) - (realMsg.createdAt || 0)) < 5000) {
+              newMap.delete(tempId);
+            }
+          }
+        });
+        return newMap;
+      });
+      
       const isFirstLoad = messages.length === 0;
       setMessages(processed);
       saveMessagesToCache(roomId, processed);
@@ -262,37 +313,89 @@ const ChatRoomContainer = () => {
       return;
     }
 
+    // Generate temporary ID for optimistic message
+    const tempId = `temp_voice_${Date.now()}_${Math.random()}`;
+    const currentTime = Date.now();
+    const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
+    const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
+
+    // Create optimistic voice message
+    const optimisticMessage = {
+      id: tempId,
+      text: '',
+      senderId: myId, 
+      receiverId: friendId,
+      createdAt: currentTime,
+      messageType: 'voice',
+      isUploading: true,
+      uploadProgress: 0,
+      media: [{ uri, type: 'audio' }],
+      ...(replyingTo && {
+        replyTo: {
+          messageId: replyingTo.id || "",
+          text: replyingTo.text,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+        },
+      }),
+    };
+
+    // Add optimistic message immediately
+    addOptimisticMessage(tempId, optimisticMessage);
+
+    // Store current reply state and clear it
+    const currentReplyingTo = replyingTo;
+    setReplyingTo(null);
+    setIsVoiceMode(false);
+
     try {
-      const fileName = uri.split('/').pop() || `voice_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp4'}`;
-      const type = Platform.OS === 'ios' ? 'audio/x-m4a' : 'audio/mp4';
+      console.log('🎤 Starting voice upload for optimistic message:', tempId);
+      
+      // Update progress during upload
+      updateOptimisticMessage(tempId, { uploadProgress: 30 });
+      
       const files = [{ uri, type, fileName }];
       const uploadedUrls = await uploadMultipleToCloudinary(files);
+      
+      console.log('🎤 Voice upload completed:', uploadedUrls);
+      updateOptimisticMessage(tempId, { uploadProgress: 90 });
 
       const payload: any = {
         text: '',
         senderId: myId,
         receiverId: friendId,
-        createdAt: Date.now(),
+        createdAt: currentTime,
         messageType: 'voice',
         media: uploadedUrls.map((url) => ({ uri: url, type: 'audio' })),
       };
 
-      if (replyingTo) {
+      if (currentReplyingTo) {
         payload.replyTo = {
-          messageId: replyingTo.id || "",
-          text: replyingTo.text,
-          senderId: replyingTo.senderId,
-          senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+          messageId: currentReplyingTo.id || "",
+          text: currentReplyingTo.text,
+          senderId: currentReplyingTo.senderId,
+          senderName: currentReplyingTo.senderId === myId ? myName : friendName || "Friend",
         };
         await sendReplyMessage(roomId, payload);
-        setReplyingTo(null);
       } else {
         await sendMessage(roomId, payload);
       }
+
+      console.log('🎤 Voice message sent successfully');
+      
+      // Don't remove optimistic message here - let the listener handle it
+      // when the real message arrives to prevent duplicates
+      
     } catch (err: any) {
+      console.error('🎤 Voice message error:', err);
+      // Update optimistic message to show error
+      updateOptimisticMessage(tempId, {
+        isUploading: false,
+        uploadError: err.message || "Failed to send voice message",
+        uploadProgress: undefined,
+      });
+      
       Alert.alert("Error", `Failed to send voice message: ${err.message}`);
-    } finally {
-      setIsVoiceMode(false);
     }
   };
 
@@ -378,86 +481,129 @@ const ChatRoomContainer = () => {
 
     if (!hasTextOrFiles) return;
 
+    // Generate temporary ID for optimistic message
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+    const currentTime = Date.now();
+
+    // Determine messageType based on media content
+    let messageType = 'text';
+    if (selectedFiles.length > 0) {
+      const firstFile = selectedFiles[0];
+      const firstFileType = firstFile.type;
+      const firstFileUri = firstFile.uri || '';
+      const fileName = firstFile.fileName || '';
+      
+      // Enhanced GIF detection - check MIME type, file extension, and URI
+      const isGif = firstFileType === 'image/gif' || 
+                   fileName.toLowerCase().endsWith('.gif') ||
+                   firstFileUri.toLowerCase().includes('.gif');
+      
+      if (isGif) {
+        messageType = 'gif';
+      } else if (firstFileType?.startsWith('video')) {
+        messageType = 'video';
+      } else if (firstFileType?.startsWith('audio')) {
+        messageType = 'audio';
+      } else if (firstFileType?.startsWith('image')) {
+        messageType = 'image';
+      } else {
+        messageType = 'file';
+      }
+    }
+
+    // Create optimistic message
+    const optimisticMessage = {
+      id: tempId,
+      text: text.trim(),
+      senderId: myId,
+      receiverId: friendId,
+      createdAt: currentTime,
+      messageType,
+      isUploading: selectedFiles.length > 0,
+      uploadProgress: 0,
+      media: selectedFiles.length > 0 ? selectedFiles.map(file => ({ 
+        uri: file.uri, 
+        type: file.type 
+      })) : undefined,
+      ...(replyingTo && {
+        replyTo: {
+          messageId: replyingTo.id || "",
+          text: replyingTo.text,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+        },
+      }),
+    };
+
+    // Add optimistic message immediately
+    addOptimisticMessage(tempId, optimisticMessage);
+
+    // Clear input immediately for better UX
+    const currentText = text.trim();
+    const currentFiles = [...selectedFiles];
+    const currentReplyingTo = replyingTo;
+    setText("");
+    setSelectedFiles([]);
+    setReplyingTo(null);
+
     try {
       let uploadedUrls: string[] = [];
-      if (selectedFiles.length > 0) {
-        const files = selectedFiles.map((file) => ({
+      
+      // Upload files if any
+      if (currentFiles.length > 0) {
+        const files = currentFiles.map((file) => ({
           uri: file.uri,
           type: file.type,
           fileName: file.fileName || `file_${Date.now()}`,
         }));
+        
+        // Update progress during upload
+        updateOptimisticMessage(tempId, { uploadProgress: 50 });
         uploadedUrls = await uploadMultipleToCloudinary(files);
-      }
-
-      // Determine messageType based on media content
-      let messageType = 'text';
-      if (uploadedUrls.length > 0) {
-        const firstFile = selectedFiles[0];
-        const firstFileType = firstFile.type;
-        const firstFileUri = firstFile.uri || '';
-        const fileName = firstFile.fileName || '';
-        
-        console.log('DEBUG - File detection:', {
-          type: firstFileType,
-          uri: firstFileUri,
-          fileName: fileName
-        });
-        
-        // Enhanced GIF detection - check MIME type, file extension, and URI
-        const isGif = firstFileType === 'image/gif' || 
-                     fileName.toLowerCase().endsWith('.gif') ||
-                     firstFileUri.toLowerCase().includes('.gif');
-        
-        console.log('DEBUG - GIF detection:', { isGif, firstFileType });
-        
-        if (isGif) {
-          messageType = 'gif';
-        } else if (firstFileType?.startsWith('video')) {
-          messageType = 'video';
-        } else if (firstFileType?.startsWith('audio')) {
-          messageType = 'audio';
-        } else if (firstFileType?.startsWith('image')) {
-          // This should come AFTER GIF check to avoid catching image/gif
-          messageType = 'image';
-        } else {
-          messageType = 'file';
-        }
-        
-        console.log('DEBUG - Final messageType:', messageType);
+        updateOptimisticMessage(tempId, { uploadProgress: 90 });
       }
 
       const payload: any = {
-        text: text.trim(),
+        text: currentText,
         senderId: myId,
         receiverId: friendId,
-        createdAt: Date.now(),
+        createdAt: currentTime,
         messageType,
         ...(uploadedUrls.length > 0 && {
-          media: uploadedUrls.map((url, i) => ({ uri: url, type: selectedFiles[i].type })),
+          media: uploadedUrls.map((url, i) => ({ uri: url, type: currentFiles[i].type })),
         }),
-        ...(replyingTo && {
+        ...(currentReplyingTo && {
           replyTo: {
-            messageId: replyingTo.id || "",
-            text: replyingTo.text,
-            senderId: replyingTo.senderId,
-            senderName: replyingTo.senderId === myId ? myName : friendName || "Friend",
+            messageId: currentReplyingTo.id || "",
+            text: currentReplyingTo.text,
+            senderId: currentReplyingTo.senderId,
+            senderName: currentReplyingTo.senderId === myId ? myName : friendName || "Friend",
           },
         }),
       };
 
-      if (replyingTo) {
+      // Send the actual message
+      if (currentReplyingTo) {
         await sendReplyMessage(roomId, payload);
       } else {
         await sendMessage(roomId, payload);
       }
+
+      // Don't remove optimistic message here - let the listener handle it
+      // when the real message arrives to prevent duplicates
+      
     } catch (err: any) {
+      console.error("Send message error:", err);
+      // Update optimistic message to show error
+      updateOptimisticMessage(tempId, {
+        isUploading: false,
+        uploadError: err.message || "Failed to send message",
+        uploadProgress: undefined,
+      });
+      
       Alert.alert("Error", `Failed to send message: ${err.message}`);
-    } finally {
-      setText("");
-      setSelectedFiles([]);
-      setReplyingTo(null);
     }
-  }, [text, selectedFiles, replyingTo, myId, myName, friendId, friendName, roomId, isVoiceMode]);
+  }, [text, selectedFiles, replyingTo, myId, myName, friendId, friendName, roomId, isVoiceMode, addOptimisticMessage, updateOptimisticMessage, removeOptimisticMessage]);
 
   // Long press modal
   const handleLongPress = useCallback((msg: Message) => {
@@ -604,6 +750,9 @@ const ChatRoomContainer = () => {
             replyTo={item.replyTo}
             onLongPress={() => handleLongPress(item)}
             currentUserId={myId}
+            isUploading={item.isUploading}
+            uploadProgress={item.uploadProgress}
+            uploadError={item.uploadError}
           />
         </Swipeable>
       );
@@ -669,7 +818,7 @@ const ChatRoomContainer = () => {
           <>
             <FlatList
               ref={flatListRef}
-              data={getMessagesWithSeparators(messages)}
+              data={getMessagesWithSeparators(getAllMessages())}
               keyExtractor={(item) => item.id}
               renderItem={renderMessage}
               contentContainerStyle={styles.messageListContent}

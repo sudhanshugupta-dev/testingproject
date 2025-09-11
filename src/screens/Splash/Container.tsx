@@ -8,9 +8,12 @@ const SplashContainer = () => {
   const { t } = useTranslation();
   const opacity = new Animated.Value(0);
   const { colors } = useAppTheme();
+  const fallbackTimeout = setTimeout(() => {
+    handleNavigateNext();
+  }, 9000); // 6 seconds fallback
 
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 1, duration: 1500, useNativeDriver: true }).start();
   }, []);
 
   return (

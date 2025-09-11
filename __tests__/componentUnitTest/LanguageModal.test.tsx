@@ -17,6 +17,17 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock the i18n module
+jest.mock('../../src/localization/i18n', () => ({
+  changeLanguage: jest.fn(),
+}));
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  setItem: jest.fn(),
+  getItem: jest.fn(),
+}));
+
 // Mock Redux store
 const mockStore = configureStore({
   reducer: {
@@ -66,7 +77,7 @@ describe('LanguageModal Component', () => {
       </Provider>
     );
 
-    expect(getByText('English')).toBeTruthy();
+    expect(getByText('English ✓')).toBeTruthy();
     expect(getByText('हिंदी')).toBeTruthy();
     expect(getByText('Français')).toBeTruthy();
     expect(getByText('日本語')).toBeTruthy();
@@ -95,14 +106,15 @@ describe('LanguageModal Component', () => {
   });
 
   it('applies theme colors correctly', () => {
-    const { getByTestId } = render(
+    const { UNSAFE_root } = render(
       <Provider store={mockStore}>
         <LanguageModal visible={true} onClose={mockOnClose} />
       </Provider>
     );
 
-    const modal = getByTestId('language-modal');
+    const modal = UNSAFE_root.findByType('Modal');
     expect(modal).toBeTruthy();
   });
 });
+
 

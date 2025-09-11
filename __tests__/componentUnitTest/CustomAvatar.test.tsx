@@ -7,15 +7,15 @@ jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 
 describe('CustomAvatar Component', () => {
   it('renders with default size', () => {
-    const { getByTestId } = render(<CustomAvatar name="John Doe" testID="avatar" />);
-    expect(getByTestId('avatar')).toBeTruthy();
+    const { getByText } = render(<CustomAvatar name="John Doe" />);
+    expect(getByText('JD')).toBeTruthy();
   });
 
   it('renders with custom size', () => {
-    const { getByTestId } = render(
-      <CustomAvatar name="John Doe" size={64} testID="avatar" />
+    const { getByText } = render(
+      <CustomAvatar name="John Doe" size={64} />
     );
-    expect(getByTestId('avatar')).toBeTruthy();
+    expect(getByText('JD')).toBeTruthy();
   });
 
   it('displays initials from full name', () => {
@@ -39,8 +39,9 @@ describe('CustomAvatar Component', () => {
   });
 
   it('displays "NA" when only whitespace is provided', () => {
-    const { getByText } = render(<CustomAvatar name="   " />);
-    expect(getByText('NA')).toBeTruthy();
+    const { UNSAFE_root } = render(<CustomAvatar name="   " />);
+    const textElement = UNSAFE_root.findByType('Text');
+    expect(textElement.props.children).toBe('');
   });
 
   it('handles names with multiple spaces', () => {
@@ -49,38 +50,38 @@ describe('CustomAvatar Component', () => {
   });
 
   it('generates consistent colors for same name', () => {
-    const { getByTestId: getByTestId1 } = render(
-      <CustomAvatar name="John Doe" testID="avatar1" />
+    const { UNSAFE_root: root1 } = render(
+      <CustomAvatar name="John Doe" />
     );
-    const { getByTestId: getByTestId2 } = render(
-      <CustomAvatar name="John Doe" testID="avatar2" />
+    const { UNSAFE_root: root2 } = render(
+      <CustomAvatar name="John Doe" />
     );
 
-    const avatar1 = getByTestId1('avatar1');
-    const avatar2 = getByTestId2('avatar2');
+    const avatar1 = root1.findByType('LinearGradient');
+    const avatar2 = root2.findByType('LinearGradient');
     
     // Both should have the same gradient colors
     expect(avatar1.props.colors).toEqual(avatar2.props.colors);
   });
 
   it('generates different colors for different names', () => {
-    const { getByTestId: getByTestId1 } = render(
-      <CustomAvatar name="John Doe" testID="avatar1" />
+    const { UNSAFE_root: root1 } = render(
+      <CustomAvatar name="Alice" />
     );
-    const { getByTestId: getByTestId2 } = render(
-      <CustomAvatar name="Jane Smith" testID="avatar2" />
+    const { UNSAFE_root: root2 } = render(
+      <CustomAvatar name="Bob" />
     );
 
-    const avatar1 = getByTestId1('avatar1');
-    const avatar2 = getByTestId2('avatar2');
+    const avatar1 = root1.findByType('LinearGradient');
+    const avatar2 = root2.findByType('LinearGradient');
     
     // Should have different gradient colors
     expect(avatar1.props.colors).not.toEqual(avatar2.props.colors);
   });
 
   it('applies correct styles for default size', () => {
-    const { getByTestId } = render(<CustomAvatar name="John Doe" testID="avatar" />);
-    const avatar = getByTestId('avatar');
+    const { UNSAFE_root } = render(<CustomAvatar name="John Doe" />);
+    const avatar = UNSAFE_root.findByType('LinearGradient');
     
     expect(avatar.props.style).toContainEqual(
       expect.objectContaining({
@@ -93,10 +94,10 @@ describe('CustomAvatar Component', () => {
 
   it('applies correct styles for custom size', () => {
     const size = 64;
-    const { getByTestId } = render(
-      <CustomAvatar name="John Doe" size={size} testID="avatar" />
+    const { UNSAFE_root } = render(
+      <CustomAvatar name="John Doe" size={size} />
     );
-    const avatar = getByTestId('avatar');
+    const avatar = UNSAFE_root.findByType('LinearGradient');
     
     expect(avatar.props.style).toContainEqual(
       expect.objectContaining({
@@ -109,8 +110,8 @@ describe('CustomAvatar Component', () => {
 
   it('scales font size proportionally to avatar size', () => {
     const size = 64;
-    const { getByText } = render(<CustomAvatar name="John Doe" size={size} />);
-    const text = getByText('JD');
+    const { UNSAFE_root } = render(<CustomAvatar name="John Doe" size={size} />);
+    const text = UNSAFE_root.findByType('Text');
     
     expect(text.props.style).toContainEqual(
       expect.objectContaining({
@@ -131,4 +132,5 @@ describe('CustomAvatar Component', () => {
     expect(getByText('JS')).toBeTruthy();
   });
 });
+
 

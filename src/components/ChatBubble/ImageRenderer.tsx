@@ -13,7 +13,7 @@ interface ImageRendererProps {
 
 const ImageRenderer: React.FC<ImageRendererProps> = ({ media, onPreview }) => {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="image-renderer">
       {media.map((file, index) => (
         <Pressable 
           key={index} 

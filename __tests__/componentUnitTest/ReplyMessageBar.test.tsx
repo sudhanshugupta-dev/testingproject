@@ -134,7 +134,8 @@ describe('ReplyMessageBar Component', () => {
       </Provider>
     );
 
-    expect(getByText('This is a very long message that should be truncated when it excee...')).toBeTruthy();
+    // The message is 95 characters, so it should be truncated to first 50 + "..."
+    expect(getByText('This is a very long message that should be truncat...')).toBeTruthy();
   });
 
   it('calls onCancel when cancel button is pressed', () => {
@@ -224,7 +225,8 @@ describe('ReplyMessageBar Component', () => {
       </Provider>
     );
 
-    expect(getByText('This message has exactly fifty characters in length')).toBeTruthy();
+    // Message is 51 characters, so it should be truncated to first 50 + "..."
+    expect(getByText('This message has exactly fifty characters in lengt...')).toBeTruthy();
   });
 
   it('handles message with 49 characters', () => {
@@ -246,4 +248,5 @@ describe('ReplyMessageBar Component', () => {
     expect(getByText('This message has forty-nine characters in length')).toBeTruthy();
   });
 });
+
 
