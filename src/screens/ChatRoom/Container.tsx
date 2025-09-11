@@ -276,6 +276,22 @@ const ChatRoomContainer = () => {
         id: m.id || `${m.senderId}-${m.createdAt}`,
       }));
       
+      // Remove optimistic messages that match real messages
+      setOptimisticMessages(prev => {
+        const newMap = new Map(prev);
+        processed.forEach(realMsg => {
+          // Remove optimistic messages that have the same content and sender
+          for (const [tempId, optimisticMsg] of newMap.entries()) {
+            if (optimisticMsg.senderId === realMsg.senderId &&
+                optimisticMsg.text === realMsg.text &&
+                Math.abs((optimisticMsg.createdAt || 0) - (realMsg.createdAt || 0)) < 5000) {
+              newMap.delete(tempId);
+            }
+          }
+        });
+        return newMap;
+      });
+      
       const isFirstLoad = messages.length === 0;
       setMessages(processed);
       saveMessagesToCache(roomId, processed);
@@ -307,7 +323,7 @@ const ChatRoomContainer = () => {
     const optimisticMessage = {
       id: tempId,
       text: '',
-      senderId: myId,
+      senderId: myId, 
       receiverId: friendId,
       createdAt: currentTime,
       messageType: 'voice',
@@ -367,8 +383,8 @@ const ChatRoomContainer = () => {
 
       console.log('🎤 Voice message sent successfully');
       
-      // Remove optimistic message after successful send
-      setTimeout(() => removeOptimisticMessage(tempId), 1000);
+      // Don't remove optimistic message here - let the listener handle it
+      // when the real message arrives to prevent duplicates
       
     } catch (err: any) {
       console.error('🎤 Voice message error:', err);
@@ -573,9 +589,8 @@ const ChatRoomContainer = () => {
         await sendMessage(roomId, payload);
       }
 
-      // Remove optimistic message after successful send
-      // The real message will come through the listener
-      setTimeout(() => removeOptimisticMessage(tempId), 1000);
+      // Don't remove optimistic message here - let the listener handle it
+      // when the real message arrives to prevent duplicates
       
     } catch (err: any) {
       console.error("Send message error:", err);
