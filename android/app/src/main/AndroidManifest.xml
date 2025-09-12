@@ -28,8 +28,11 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
-            <action android:name="androidx.core.content.pm.SHORTCUT_CONTENT" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="testingproject" />
         </intent-filter>
         <meta-data
         android:name="androidx.core.content.MIME_TYPES"
