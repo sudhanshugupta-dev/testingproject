@@ -57,13 +57,13 @@
     "edit": "एडिट करें"
   },
   "requests": {
-    "friendRequests": "दोस्त अनुरोध",
+    "friendRequests": "दोस्त निवेदन",
     "suggested": "सुझाव",
     "suggestedUsers": "सुझाए गए उपयोगकर्ता",
     "accept": "स्वीकार करें",
     "decline": "अस्वीकार करें",
-    "sendRequest": "अनुरोध भेजें",
-    "noRequests": "कोई दोस्त अनुरोध नहीं",
+    "sendRequest": "निवेदन भेजें",
+    "noRequests": "कोई दोस्त निवेदन नहीं",
     "noSuggestedUsers": "कोई सुझाए गए उपयोगकर्ता नहीं"
   }
 }

@@ -5,11 +5,13 @@ import { RootState } from '../../redux/store';
 import LanguageModal from '../../components/LanguageModal';
 import { useAppTheme } from '../../themes/useTheme';
 import { useTranslation } from 'react-i18next';
+import { createStyles } from './styles';
 
 const LanguageContainer = () => {
   const [visible, setVisible] = useState(true);
   const lang = useSelector((s: RootState) => s.language.code);
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const { t } = useTranslation();
 
   return (
@@ -23,6 +25,5 @@ const LanguageContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16 }, title: { fontWeight: '700', fontSize: 18, marginBottom: 8 }, row: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }, label: { } });
 
 export default LanguageContainer;

@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import GoogleSignUpButton from '../../components/GoogleButton';
 import { useAppTheme } from '../../themes/useTheme';
+import { createStyles } from './styles';
 import { signInWithGoogle } from '../../services/firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -20,7 +21,8 @@ const SignupContainer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const loading = useSelector((s: RootState) => s.auth.loading);
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,9 +104,5 @@ const SignupContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, justifyContent: 'center' },
-  link: { textAlign: 'center', marginTop: 15, fontSize: 16, fontWeight: '900' },
-});
 
 export default SignupContainer;

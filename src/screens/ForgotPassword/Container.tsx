@@ -7,12 +7,14 @@ import { sendPasswordResetOTP } from '../../services/firebase/auth';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../themes/useTheme';
+import { createStyles } from './styles';
 
 const ForgotPasswordContainer = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const nav = useNavigation();
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
 
   const onSend = async () => {
     try {
@@ -33,6 +35,5 @@ const ForgotPasswordContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16, justifyContent: 'center' } });
 
 export default ForgotPasswordContainer;

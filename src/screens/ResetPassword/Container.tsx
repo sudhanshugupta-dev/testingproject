@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../themes/useTheme';
 import { useTranslation } from 'react-i18next';
+import { createStyles } from './styles';
 
 const ResetPasswordContainer = () => {
   const [password, setPassword] = useState('');
@@ -14,7 +15,8 @@ const ResetPasswordContainer = () => {
   const route = useRoute<any>();
   const nav = useNavigation();
   const email = route.params?.email;
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const { t } = useTranslation();
 
   const onReset = async () => {
@@ -41,6 +43,5 @@ const ResetPasswordContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16, justifyContent: 'center' } });
 
 export default ResetPasswordContainer;

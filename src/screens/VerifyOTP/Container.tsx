@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../themes/useTheme';
 import { useTranslation } from 'react-i18next';
+import { createStyles } from './styles';
 
 
 const VerifyOTPContainer = () => {
@@ -14,7 +15,8 @@ const VerifyOTPContainer = () => {
   const route = useRoute<any>();
   const nav = useNavigation();
   const email = route.params?.email;
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const { t } = useTranslation();
 
   const onVerify = async () => {
@@ -35,12 +37,11 @@ const VerifyOTPContainer = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>      
       {/* <CustomTextInput value={otp} onChangeText={setOtp} placeholder="123456" /> */}
-      <Text style={{ textAlign:'center', fontSize:18, marginBottom:16}}>Check your mail  for rest Password</Text>
+      <Text style={styles.messageText}>Check your mail for reset Password</Text>
       <CustomButton title={t('auth.verifyOtp')} onPress={onVerify} />
     </View>
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 16, justifyContent: 'center' } });
 
 export default VerifyOTPContainer;

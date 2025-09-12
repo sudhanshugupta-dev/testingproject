@@ -6,11 +6,13 @@ import { useAppTheme } from '../../themes';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../../redux/store';
 import { bootstrapApp } from '../../redux/slices/appBootstrap';
+import { createStyles } from './styles';
 
 const SplashContainer = () => {
   const { t } = useTranslation();
   const opacity = new Animated.Value(0);
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const dispatch = useDispatch<AppDispatch>();
 
   const handleNavigateNext = () => {
@@ -39,6 +41,5 @@ const SplashContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({ container: { flex: 1, alignItems: 'center', justifyContent: 'center' }, title: { fontSize: 28, fontWeight: '700', marginTop: 12 }, subtitle: { marginTop: 10 } });
 
 export default SplashContainer;

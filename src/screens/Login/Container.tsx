@@ -122,13 +122,15 @@ import { useAppTheme } from '../../themes/useTheme';
 import GoogleSignUpButton from '../../components/GoogleButton';
 import { signInWithGoogle } from '../../services/firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createStyles } from './styles';
 
 const LoginContainer = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const loading = useSelector((s: RootState) => s.auth.loading);
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -220,16 +222,5 @@ const LoginContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, justifyContent: 'center' },
-  link: { textAlign: 'center', marginTop: 15, fontSize: 16, fontWeight: '900' },
-  googleButtonContainer: { position: 'relative', marginTop: 15 },
-  loader: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-  },
-});
 
 export default LoginContainer;

@@ -10,6 +10,7 @@ import { toggleTheme } from '../../redux/slices/themeSlice';
 import { logout } from '../../redux/slices/authSlice';
 import LanguageModal from '../../components/LanguageModal';
 import { useAppTheme } from '../../themes/useTheme';
+import { createStyles } from './styles';
 import { useTranslation } from 'react-i18next';
 import { RouteProp, useRoute } from '@react-navigation/native';
 
@@ -22,7 +23,8 @@ const ProfileContainer = () => {
   const theme = useSelector((s: RootState) => s.theme.mode);
   //const name  = useSelector((s:RootState) => s.auth.user?.name);
   const lang = useSelector((s: RootState) => s.language.code);
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(mode);
   const [showLang, setShowLang] = useState(false);
   const { t } = useTranslation();
  console.log("user", user)
@@ -84,24 +86,5 @@ const ProfileContainer = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingTop: Platform.OS === 'ios' ? 44 : 24 },
-  header: { alignItems: 'center', marginVertical: 24, padding: 16 },
-  email: { marginTop: 12, fontSize: 18, fontWeight: '600', letterSpacing: 0.3 },
-  section: { marginTop: 16 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  rowLeft: { flexDirection: 'row', alignItems: 'center' },
-  icon: { marginRight: 12 },
-  label: { fontSize: 16, fontWeight: '500' },
-  value: { fontSize: 16, fontWeight: '400' },
-});
 
 export default ProfileContainer;
