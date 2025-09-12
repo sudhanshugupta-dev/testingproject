@@ -438,7 +438,36 @@ export const declineFriendRequest = async (fromUserId: string): Promise<void> =>
 };
 
 /** --------------------------
- *  GET ALL FRIEND REQUESTS
+ *  CANCEL FRIEND REQUEST
+ * --------------------------- */
+export const cancelFriendRequest = async (toUserId: string): Promise<void> => {
+  const fromUserId = getCurrentUserId();
+  if (!fromUserId || !toUserId) throw new Error('User IDs are required');
+
+  const db = firestore();
+  const batch = db.batch();
+
+  try {
+    // Remove the sent request from sender's document
+    batch.update(db.collection('friendRequests').doc(fromUserId), {
+      [`sent.${toUserId}`]: firestore.FieldValue.delete(),
+    });
+
+    // Remove the received request from recipient's document
+    batch.update(db.collection('friendRequests').doc(toUserId), {
+      [`received.${fromUserId}`]: firestore.FieldValue.delete(),
+    });
+
+    await batch.commit();
+    console.log(`Friend request cancelled from ${fromUserId} to ${toUserId}`);
+  } catch (error: any) {
+    console.error('Error cancelling friend request:', error);
+    throw new Error(error.message);
+  }
+};
+
+/** --------------------------
+ *  GET ALL FRIEND REQUESTS (RECEIVED)
  * --------------------------- */
 export const getFriendRequests = async () => {
   const userId = getCurrentUserId();
@@ -469,6 +498,43 @@ export const getFriendRequests = async () => {
     return users.filter(Boolean);
   } catch (error) {
     console.error('Error fetching friend requests:', error);
+    return [];
+  }
+};
+
+/** --------------------------
+ *  GET ALL SENT REQUESTS
+ * --------------------------- */
+export const getSentRequests = async () => {
+  const userId = getCurrentUserId();
+  const db = firestore();
+
+  try {
+    const doc = await db.collection('friendRequests').doc(userId).get();
+    const sent = doc.exists ? (doc.data()?.sent || {}) : {};
+
+    const pendingIds = Object.keys(sent).filter(
+      uid => sent[uid] === 'pending'
+    );
+
+    const users = await Promise.all(
+      pendingIds.map(async uid => {
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) return null;
+        const data = userDoc.data() as any;
+        return {
+          id: userDoc.id,
+          name: data.name || 'Unknown',
+          email: data.email || 'No email',
+          avatar: data.avatar || null,
+          status: 'pending',
+        };
+      })
+    );
+
+    return users.filter(Boolean);
+  } catch (error) {
+    console.error('Error fetching sent requests:', error);
     return [];
   }
 };

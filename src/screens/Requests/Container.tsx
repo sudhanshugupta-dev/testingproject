@@ -193,14 +193,17 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import {
   getFriendRequests,
   getSuggestedUsers,
+  getSentRequests,
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
+  cancelFriendRequest,
 } from '../../services/firebase/requests';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../themes/useTheme';
@@ -215,16 +218,23 @@ const RequestedContainer: React.FC = () => {
 
   const [requests, setRequests] = useState<any[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [sentRequests, setSentRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'requests' | 'suggested'>('requests');
+  const [sendingRequests, setSendingRequests] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     if (!refreshing) setLoading(true);
     try {
-      const [reqs, suggestions] = await Promise.all([getFriendRequests(), getSuggestedUsers()]);
+      const [reqs, suggestions, sentReqs] = await Promise.all([
+        getFriendRequests(), 
+        getSuggestedUsers(),
+        getSentRequests()
+      ]);
       setRequests(reqs || []);
       setSuggestedUsers(suggestions || []);
+      setSentRequests(sentReqs || []);
     } catch (err) {
       console.error('Error loading data:', err);
     } finally {
@@ -253,8 +263,68 @@ const RequestedContainer: React.FC = () => {
   };
 
   const handleSendRequest = async (toUserId: string) => {
-    await sendFriendRequest(toUserId);
-    fetchData();
+    // Optimistic UI: Remove from suggested immediately
+    const userToMove = suggestedUsers.find(user => user.id === toUserId);
+    if (!userToMove) return;
+
+    // Update UI immediately
+    setSuggestedUsers(prev => prev.filter(user => user.id !== toUserId));
+    setSentRequests(prev => [...prev, { ...userToMove, status: 'pending' }]);
+    setSendingRequests(prev => new Set([...prev, toUserId]));
+
+    try {
+      await sendFriendRequest(toUserId);
+      // Show success alert
+      Alert.alert(
+        t('requests.success'),
+        t('requests.requestSent'),
+        [{ text: t('common.ok') }]
+      );
+    } catch (error: any) {
+      console.error('Failed to send friend request:', error);
+      // Revert optimistic update on error
+      setSuggestedUsers(prev => [...prev, userToMove]);
+      setSentRequests(prev => prev.filter(user => user.id !== toUserId));
+      Alert.alert(
+        t('requests.error'),
+        error.message || t('requests.requestFailed'),
+        [{ text: t('common.ok') }]
+      );
+    } finally {
+      setSendingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(toUserId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleCancelRequest = async (toUserId: string) => {
+    const userToMove = sentRequests.find(user => user.id === toUserId);
+    if (!userToMove) return;
+
+    // Optimistic UI: Move back to suggested
+    setSentRequests(prev => prev.filter(user => user.id !== toUserId));
+    setSuggestedUsers(prev => [...prev, { ...userToMove, status: undefined }]);
+
+    try {
+      await cancelFriendRequest(toUserId);
+      Alert.alert(
+        t('requests.success'),
+        t('requests.requestCancelled'),
+        [{ text: t('common.ok') }]
+      );
+    } catch (error: any) {
+      console.error('Failed to cancel friend request:', error);
+      // Revert on error
+      setSuggestedUsers(prev => prev.filter(user => user.id !== toUserId));
+      setSentRequests(prev => [...prev, userToMove]);
+      Alert.alert(
+        t('requests.error'),
+        error.message || t('requests.cancelFailed'),
+        [{ text: t('common.ok') }]
+      );
+    }
   };
 
   const renderRequestItem = ({ item }: { item: any }) => (
@@ -271,13 +341,45 @@ const RequestedContainer: React.FC = () => {
     </View>
   );
 
-  const renderSuggestedItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <Text style={styles.text}>{item.name}</Text>
+  const renderSuggestedItem = ({ item }: { item: any }) => {
+    const isLoading = sendingRequests.has(item.id);
+    return (
+      <View style={styles.card}>
+        <Text style={styles.text}>{item.name}</Text>
+        <Text style={styles.subText}>{item.email}</Text>
+        <TouchableOpacity 
+          style={[styles.requestBtn, isLoading && styles.disabledBtn]} 
+          onPress={() => handleSendRequest(item.id)}
+          disabled={isLoading}
+        >
+          <Text style={styles.btnText}>
+            {isLoading ? t('requests.sending') : t('requests.sendRequest')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderSentRequestItem = ({ item }: { item: any }) => (
+    <View style={[styles.card, styles.sentCard]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.text}>{item.name}</Text>
+        <Text style={[styles.requestTypeLabel, { color: colors.primary }]}>
+          {t('requests.sentLabel')}
+        </Text>
+      </View>
       <Text style={styles.subText}>{item.email}</Text>
-      <TouchableOpacity style={styles.requestBtn} onPress={() => handleSendRequest(item.id)}>
-        <Text style={styles.btnText}>{t('requests.sendRequest')}</Text>
-      </TouchableOpacity>
+      <View style={styles.row}>
+        <Text style={[styles.statusText, { color: colors.warning }]}>
+          {t('requests.pending')}
+        </Text>
+        <TouchableOpacity 
+          style={styles.cancelBtn} 
+          onPress={() => handleCancelRequest(item.id)}
+        >
+          <Text style={styles.btnText}>{t('requests.cancel')}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -325,18 +427,17 @@ const RequestedContainer: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Requests list */}
+      {/* Content based on active tab */}
       {activeTab === 'requests' ? (
         <FlatList
-          data={requests}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderRequestItem}
+          data={[...requests.map(item => ({...item, type: 'received'})), ...sentRequests.map(item => ({...item, type: 'sent'}))]}
+          keyExtractor={(item) => `${item.type}-${item.id}`}
+          renderItem={({item}) => item.type === 'received' ? renderRequestItem({item}) : renderSentRequestItem({item})}
           ListHeaderComponent={<Text style={styles.heading}>{t('requests.friendRequests')}</Text>}
           ListEmptyComponent={<Text style={styles.noData}>{t('requests.noRequests')}</Text>}
           {...listCommonProps}
         />
       ) : (
-        /* Suggested Users list */
         <FlatList
           data={suggestedUsers}
           keyExtractor={(item) => String(item.id)}

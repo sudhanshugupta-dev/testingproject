@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 import {useAppTheme } from '../../themes/useTheme'
 
 //const { colors, fonts} = useAppTheme();const colors = useAppTheme();
-export const createStyles = (colors) => StyleSheet.create({
+export const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
@@ -26,12 +26,6 @@ export const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-  btnText: {
-  color: '#fff', // ✅ always readable
-  fontWeight: '600',
-  fontSize: 14,
-  textAlign: 'center',
-},
   activeTab: {
     backgroundColor: colors.primary,
   },
@@ -107,10 +101,41 @@ export const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   btnText: {
-    color: colors.text,
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
     textAlign: 'center',
+  },
+  disabledBtn: {
+    backgroundColor: colors.disabled || '#cccccc',
+    opacity: 0.6,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  cancelBtn: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  sentCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  requestTypeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   loading: {
     flex: 1,

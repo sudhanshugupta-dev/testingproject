@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChatScreen from '../screens/Chat';
 import RequestsScreen from '../screens/Requests';
 import ProfileScreen from '../screens/Profile';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
-import { Animated, View, StyleSheet, Dimensions } from 'react-native';
+import { Animated, View, StyleSheet, Dimensions, Keyboard, Platform } from 'react-native';
 import { useAppTheme } from '../themes/useTheme';
 
 export type MainTabsParamList = {
@@ -18,24 +18,31 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 const { width } = Dimensions.get('window');
 
 const AnimatedIcon = ({ name, color, focused, size = 24 }: { name: string; color: string; focused: boolean; size?: number }) => {
-  const scale = useRef(new Animated.Value(focused ? 1.2 : 1)).current;
-  const rotate = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, { 
-        toValue: focused ? 1.2 : 1, 
-        useNativeDriver: true, 
-        tension: 100,
-        friction: 8 
-      }),
-      Animated.spring(rotate, { 
-        toValue: focused ? 1 : 0, 
-        useNativeDriver: true, 
-        tension: 80,
-        friction: 6 
-      })
-    ]).start();
+    if (focused) {
+      // Only animate when becoming active
+      Animated.parallel([
+        Animated.spring(scale, { 
+          toValue: 1.2, 
+          useNativeDriver: true, 
+          tension: 100,
+          friction: 8 
+        }),
+        Animated.spring(rotate, { 
+          toValue: 1, 
+          useNativeDriver: true, 
+          tension: 80,
+          friction: 6 
+        })
+      ]).start();
+    } else {
+      // Reset to normal state without animation for inactive tabs
+      scale.setValue(1);
+      rotate.setValue(0);
+    }
   }, [focused, scale, rotate]);
 
   const rotateInterpolate = rotate.interpolate({
@@ -45,7 +52,7 @@ const AnimatedIcon = ({ name, color, focused, size = 24 }: { name: string; color
 
   return (
     <Animated.View style={{ 
-      transform: [{ scale }, { rotate: rotateInterpolate }],
+      transform: focused ? [{ scale }, { rotate: rotateInterpolate }] : [{ scale: 1 }],
       alignItems: 'center',
       justifyContent: 'center'
     }}>
@@ -58,9 +65,65 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const tabBarOpacity = useRef(new Animated.Value(1)).current;
+  const tabBarTranslateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+        Animated.parallel([
+          Animated.timing(tabBarOpacity, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(tabBarTranslateY, {
+            toValue: 100,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    );
+
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+        Animated.parallel([
+          Animated.timing(tabBarOpacity, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(tabBarTranslateY, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, [tabBarOpacity, tabBarTranslateY]);
   
   return (
-    <View style={styles.tabBarContainer}>
+    <Animated.View 
+      style={[
+        styles.tabBarContainer,
+        {
+          opacity: tabBarOpacity,
+          transform: [{ translateY: tabBarTranslateY }],
+        }
+      ]}
+    >
       <View style={styles.tabBar}>
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
@@ -120,7 +183,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

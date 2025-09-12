@@ -75,10 +75,22 @@
     "friendRequests": "Friend Requests",
     "suggested": "Suggested",
     "suggestedUsers": "Suggested Person",
+    "sentRequests": "Sent Requests",
     "accept": "Accept",
     "decline": "Decline",
     "sendRequest": "Send Request",
+    "cancel": "Cancel",
+    "pending": "Pending",
+    "sending": "Sending...",
+    "success": "Success",
+    "error": "Error",
+    "requestSent": "Friend request sent successfully!",
+    "requestCancelled": "Friend request cancelled successfully!",
+    "requestFailed": "Failed to send friend request",
+    "cancelFailed": "Failed to cancel friend request",
+    "sentLabel": "Sent",
     "noRequests": "No friend requests",
-    "noSuggestedUsers": "No suggested users"
+    "noSuggestedUsers": "No suggested users",
+    "noSentRequests": "No sent requests"
   }
 }

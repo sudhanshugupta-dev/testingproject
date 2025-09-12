@@ -8,20 +8,15 @@ import { Appearance } from 'react-native';
 type AppState = { bootstrapped: boolean };
 const initialState: AppState = { bootstrapped: false };
 
-export const bootstrapApp = createAsyncThunk('app/bootstrap', async (_, { dispatch }) => {
-  const [theme, lang, token, user] = await Promise.all([
-    AsyncStorage.getItem('theme'),
+export const bootstrapApp = createAsyncThunk('app/bootstrap', async (_, { dispatch, getState }) => {
+  const [lang, token, user] = await Promise.all([
     AsyncStorage.getItem('language'),
     AsyncStorage.getItem('token'),
     AsyncStorage.getItem('user'),
   ]);
 
-  if (theme === 'light' || theme === 'dark') {
-    dispatch(restoreTheme(theme));
-  } else {
-    const system = Appearance.getColorScheme();
-    dispatch(restoreTheme(system === 'dark' ? 'dark' : 'light'));
-  }
+  // Skip theme restoration since it's already handled in App.tsx
+  // This prevents overriding the pre-loaded theme
 
   if (lang === 'en' || lang === 'hi' || lang === 'es' || lang === 'fr' || lang === 'ja') dispatch(restoreLanguage(lang as any));
   dispatch(restoreAuth({ token, user: user ? JSON.parse(user) : null }));
