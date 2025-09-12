@@ -796,9 +796,9 @@ const ChatRoomContainer = () => {
             <Text style={[styles.friendName, { color: colors.text }]}>
               {friendName || t("chat.friend")}
             </Text>
-            <Text style={[styles.roomInfo, { color: colors.text, opacity: 0.6 }]}>
+            {/* <Text style={[styles.roomInfo, { color: colors.text, opacity: 0.6 }]}>
               Room: {roomId ? roomId.substring(0, 8) + "..." : t("chat.loading")}
-            </Text>
+            </Text> */}
           </View>
         </View>
 

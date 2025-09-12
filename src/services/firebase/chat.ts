@@ -290,11 +290,41 @@ const unsubFriends = listenToFriends(friendIds => {
         chats[friendId] = chatItem;
       }
 
-      // Always sort (self will also be included)
+      // Always sort (self will also be included) - most recent first
       const sorted = Object.values(chats).sort((a, b) => {
-        const t1 = a.lastMessage?.timestamp?.toMillis?.() || 0;
-        const t2 = b.lastMessage?.timestamp?.toMillis?.() || 0;
-        return t2 - t1;
+        // Handle different timestamp formats
+        const getTimestamp = (chat: ChatItem) => {
+          if (!chat.lastMessage?.timestamp) return 0;
+          
+          const timestamp = chat.lastMessage.timestamp;
+          
+          // If it's a Firestore timestamp with toMillis method
+          if (timestamp && typeof timestamp.toMillis === 'function') {
+            return timestamp.toMillis();
+          }
+          
+          // If it's already a number (milliseconds)
+          if (typeof timestamp === 'number') {
+            return timestamp;
+          }
+          
+          // If it's a Date object
+          if (timestamp instanceof Date) {
+            return timestamp.getTime();
+          }
+          
+          // If it's a string, try to parse it
+          if (typeof timestamp === 'string') {
+            return new Date(timestamp).getTime();
+          }
+          
+          return 0;
+        };
+        
+        const t1 = getTimestamp(a);
+        const t2 = getTimestamp(b);
+        
+        return t2 - t1; // Most recent first (descending order)
       });
 
       onData(sorted);
