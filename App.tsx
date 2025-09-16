@@ -84,7 +84,7 @@ import { bootstrapApp } from './src/redux/slices/appBootstrap';
 import { restoreTheme } from './src/redux/slices/themeSlice';
 import { getInitialTheme } from './src/utils/themeInitializer';
 import Toast from 'react-native-toast-message';
-import { getApp } from '@react-native-firebase/app';
+import { initializeBadgeSystem } from './src/utils/badgeUtils';
 import QuickActions from 'react-native-quick-actions';
 import { DeviceEventEmitter } from 'react-native';
 import { openCamera, openGallery } from './src/utils/cameraUtils';
@@ -111,6 +111,16 @@ const ThemedNavigation = () => {
 const App = () => {
   const [themeInitialized, setThemeInitialized] = useState(false);
 
+  const handleQuickActionDirect = (actionType: string) => {
+    if (actionType === 'camera') {
+      openCamera();
+      return;
+    }
+    if (actionType === 'gallery') {
+      openGallery();
+    }
+  };
+
   // Theme initialization
   useEffect(() => {
     const initializeTheme = async () => {
@@ -120,23 +130,9 @@ const App = () => {
         setThemeInitialized(true);
       } catch (error) {
         console.warn('Failed to initialize theme:', error);
-        // Fallback to system theme
         const systemTheme = require('react-native').Appearance.getColorScheme();
         store.dispatch(restoreTheme(systemTheme === 'dark' ? 'dark' : 'light'));
         setThemeInitialized(true);
-      }
-    };
-
-    initializeTheme();
-  }, []);
-
-  // Quick Actions setup
-  useEffect(() => {
-    const handleQuickActionDirect = (actionType: string) => {
-      if (actionType === 'camera') {
-        openCamera();
-      } else if (actionType === 'gallery') {
-        openGallery();
       }
     };
 
@@ -148,14 +144,14 @@ const App = () => {
             type: 'camera',
             title: 'Open Camera',
             subtitle: 'Quick launch camera',
-            icon: 'compose',
+            icon: 'ic_notification',
             userInfo: { url: 'testingproject://camera' },
           },
           {
             type: 'gallery',
             title: 'Open Gallery',
             subtitle: 'Quick launch gallery',
-            icon: 'capturephoto',
+            icon: 'ic_notification',
             userInfo: { url: 'testingproject://gallery' },
           },
         ]);
@@ -171,6 +167,9 @@ const App = () => {
       }
     };
 
+    initializeTheme();
+    // Initialize notifications and request runtime permission if needed
+    initializeBadgeSystem();
     setupQuickActions();
 
     // Handle when app is already running

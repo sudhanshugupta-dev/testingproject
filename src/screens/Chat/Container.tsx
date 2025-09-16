@@ -105,7 +105,7 @@ const ChatContainer = () => {
           ]}
           android_ripple={{ color: colors.primary + '20' }}
           onPress={() => {
-            if (item.unreadCount > 0) {
+            if (item.unseenCount > 0) {
               dispatch(markChatAsRead(item.id));
             }
             nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name });
@@ -160,10 +160,10 @@ const ChatContainer = () => {
           </View>
 
           {/* Unread Badge */}
-          {item.unreadCount > 0 && (
+          {item.unseenCount > 0 && (
             <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.unreadText}>
-                {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                {item.unseenCount > 99 ? '99+' : item.unseenCount}
               </Text>
             </View>
           )}

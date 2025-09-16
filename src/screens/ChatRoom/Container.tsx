@@ -32,8 +32,9 @@ import downloadService from "../../services/downloadService";
 import ChatBubble from "../../components/ChatBubble";
 import CustomAvatar from "../../components/CustomAvatar";
 import ReplyMessageBar from "../../components/ReplyMessageBar";
-import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../redux/store";
+import { markChatAsRead } from "../../redux/slices/chatsSlice";
 import { useAppTheme } from "../../themes";
 import { createStyles } from "./styles";
 import { useTranslation } from "react-i18next";
@@ -90,6 +91,7 @@ const ChatRoomContainer = () => {
   const route = useRoute<any>();
   const { friendId, friendName } = route.params || {};
   const nav = useNavigation<any>();
+  const dispatch = useDispatch<AppDispatch>();
 
   const myId = useSelector((s: RootState) => s.auth.user?.uid);
   const myName = useSelector((s: RootState) => s.auth.user?.email || "Me");
@@ -776,10 +778,16 @@ const ChatRoomContainer = () => {
     [myId, colors, handleLongPress]
   );
 
-  // Mark as read
+  // Mark as read when entering chat room
   useEffect(() => {
-    if (roomId && myId) markMessagesAsRead(roomId, myId);
-  }, [roomId, myId]);
+    if (roomId && myId && friendId) {
+      // Mark messages as read in Firebase
+      markMessagesAsRead(roomId, myId);
+      
+      // Mark chat as read in Redux store to update badge count
+      dispatch(markChatAsRead(friendId));
+    }
+  }, [roomId, myId, friendId, dispatch]);
 
   const showSend = text.trim().length > 0 || selectedFiles.length > 0;
 

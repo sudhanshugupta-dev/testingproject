@@ -5,8 +5,9 @@ import RequestsScreen from '../screens/Requests';
 import ProfileScreen from '../screens/Profile';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
-import { Animated, View, StyleSheet, Dimensions, Keyboard, Platform } from 'react-native';
+import { Animated, View, StyleSheet, Dimensions, Keyboard, Platform, Text } from 'react-native';
 import { useAppTheme } from '../themes/useTheme';
+import useUnreadMessages from '../hooks/useUnreadMessages';
 
 export type MainTabsParamList = {
   Chat: undefined;
@@ -61,11 +62,10 @@ const AnimatedIcon = ({ name, color, focused, size = 24 }: { name: string; color
   );
 };
 
-const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+const CustomTabBar = ({ state, descriptors, navigation, keyboardVisible, unreadCount }: any) => {
   const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const tabBarOpacity = useRef(new Animated.Value(1)).current;
   const tabBarTranslateY = useRef(new Animated.Value(0)).current;
 
@@ -73,7 +73,6 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
     const keyboardDidShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
-        setKeyboardVisible(true);
         Animated.parallel([
           Animated.timing(tabBarOpacity, {
             toValue: 0,
@@ -92,7 +91,6 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
     const keyboardDidHideListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
-        setKeyboardVisible(false);
         Animated.parallel([
           Animated.timing(tabBarOpacity, {
             toValue: 1,
@@ -164,12 +162,21 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
                 ]}
                 onTouchEnd={onPress}
               >
-                <AnimatedIcon 
-                  name={getIconName()} 
-                  color={isFocused ? colors.primary : colors.textSecondary} 
-                  focused={isFocused}
-                  size={26}
-                />
+                <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                  <AnimatedIcon 
+                    name={getIconName()} 
+                    color={isFocused ? colors.primary : colors.textSecondary} 
+                    focused={isFocused}
+                    size={22}
+                  />
+                  {route.name === 'Chat' && unreadCount > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Animated.Text 
                   style={[
                     styles.tabLabel,
@@ -189,13 +196,43 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
 
 const MainTabs = () => {
   const { t } = useTranslation();
-  
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const { unreadCount } = useUnreadMessages();
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   return (
-    <Tab.Navigator 
-      tabBar={props => <CustomTabBar {...props} />}
-      screenOptions={{ 
+    <Tab.Navigator
+      tabBar={props => (
+        <CustomTabBar 
+          {...props} 
+          keyboardVisible={keyboardVisible} 
+          unreadCount={unreadCount} 
+        />
+      )}
+      screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false
+        tabBarShowLabel: false,
+        tabBarStyle: [
+          styles.tabBar,
+          keyboardVisible && styles.hiddenTabBar,
+        ],
       }}
     >
       <Tab.Screen
@@ -238,7 +275,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: 50,
     paddingHorizontal: 8,
-    
     paddingVertical: 12,
     shadowColor: colors.shadow,
     shadowOffset: {
@@ -251,9 +287,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  hiddenTabBar: {
+    position: 'absolute',
+    bottom: -100, // Move off-screen when keyboard is visible
+  },
   tabItem: {
     flex: 1,
     alignItems: 'center',
+    position: 'relative',
   },
   tabButton: {
     alignItems: 'center',
@@ -273,12 +314,32 @@ const createStyles = (colors: any) => StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-   // elevation: 8,
   },
   tabLabel: {
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
+    textAlign: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -4,
+    backgroundColor: 'red',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 2,
+    borderColor: colors.card,
+    zIndex: 10,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold',
     textAlign: 'center',
   },
 });

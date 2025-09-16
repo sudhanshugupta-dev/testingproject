@@ -199,18 +199,12 @@ const listenToChatForFriend = (
           const lastMsg = lastMsgSnap.docs[0]?.data();
 
           // 3. Count unseen messages - for self-chat, count messages where seenBy[userId] is false
-          const unseenQuery = isSelfChat 
-            ? firestore()
-                .collection('rooms')
-                .doc(roomId)
-                .collection('messages')
-                .where(`seenBy.${userId}`, '==', false)
-            : firestore()
-                .collection('rooms')
-                .doc(roomId)
-                .collection('messages')
-                .where('receiverId', '==', userId)
-                .where('status', '!=', 'seen');
+          // Use seenBy flags to compute unseen messages for the current user
+          const unseenQuery = firestore()
+            .collection('rooms')
+            .doc(roomId)
+            .collection('messages')
+            .where(`seenBy.${userId}`, '==', false);
 
           unseenQuery.onSnapshot(unseenSnap => {
             const unseenCount = unseenSnap?.size ?? 0;
@@ -228,7 +222,8 @@ const listenToChatForFriend = (
                     text: lastMsg.text || '',
                     timestamp: lastMsg?.createdAt ? lastMsg.createdAt.toDate().getTime() : null,
                     senderId: lastMsg.senderId || null,
-                    isSeen: lastMsg.status === 'true',
+                    // Derive isSeen from seenBy map for the current user; fallback to message-level isSeen
+                    isSeen: (lastMsg.seenBy && lastMsg.seenBy[userId] === true) || !!lastMsg.isSeen,
                     messageType: lastMsg.messageType || 'text',
                     seenBy: lastMsg.seenBy,
                   }
@@ -524,7 +519,6 @@ export const sendMessage = async (
       else if (hasImages) messageType = "image";
     }
     
-    console.log('Firebase API - messageType:', messageType);
 
     // ✅ Pick preview text for lastMessage
     let lastMessagePreview = message.text || "";
@@ -781,9 +775,24 @@ export const markMessagesAsRead = async (
       lastReadAt: firestore.FieldValue.serverTimestamp(),
     });
 
+    // reset unreadCount for the current user's chat doc for this room
+    const chatsSnap = await firestore()
+      .collection('chats')
+      .where('roomId', '==', roomId)
+      .get();
+
+    chatsSnap.forEach(docSnap => {
+      // chat doc id format: `${userId}_${roomId}`
+      if (docSnap.id.startsWith(userId)) {
+        batch.update(docSnap.ref, {
+          unreadCount: 0,
+        });
+      }
+    });
+
     await batch.commit();
 
-    console.log(`✅ Marked ${snapshot.size} messages as unread for user: ${userId}`);
+    console.log(`✅ Marked ${snapshot.size} messages as read for user: ${userId}`);
   } catch (error) {
     console.error('❌ Error marking messages as read:', error);
   }

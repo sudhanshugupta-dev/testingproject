@@ -101,6 +101,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AppDispatch } from '../store'; // adjust path if needed
 import { listenToChatList } from '../../services/firebase/chat';
+import { updateAppIconBadge, calculateTotalUnreadCount } from '../../utils/badgeUtils';
 
 // ---- Types ----
 export type Chat = {
@@ -139,10 +140,10 @@ const chatsSlice = createSlice({
   reducers: {
     setChats: (state, action: PayloadAction<Chat[]>) => {
       state.list = action.payload;
-      state.unreadCount = action.payload.reduce(
-        (total, chat) => total + (chat.unseenCount || 0),
-        0,
-      );
+      state.unreadCount = calculateTotalUnreadCount(action.payload);
+      
+      // Update app icon badge whenever chat list changes
+      updateAppIconBadge(state.unreadCount);
     },
     markChatAsRead: (state, action: PayloadAction<string>) => {
       const chat = state.list.find(c => c.id === action.payload);
@@ -150,6 +151,9 @@ const chatsSlice = createSlice({
         state.unreadCount -= chat.unseenCount || 0;
         chat.unseenCount = 0;
         if (chat.lastMessage) chat.lastMessage.isSeen = true;
+        
+        // Update app icon badge after marking chat as read
+        updateAppIconBadge(state.unreadCount);
       }
     },
     updateChatMessage: (
@@ -175,6 +179,9 @@ const chatsSlice = createSlice({
         if (!isFromCurrentUser) {
           chat.unseenCount = (chat.unseenCount || 0) + 1;
           state.unreadCount += 1;
+          
+          // Update app icon badge when new message arrives
+          updateAppIconBadge(state.unreadCount);
         }
       }
     },
@@ -184,6 +191,9 @@ const chatsSlice = createSlice({
         chat.unseenCount = 0;
         if (chat.lastMessage) chat.lastMessage.isSeen = true;
       });
+      
+      // Update app icon badge after resetting all counts
+      updateAppIconBadge(0);
     },
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
