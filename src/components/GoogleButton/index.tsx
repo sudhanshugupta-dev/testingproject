@@ -6,30 +6,21 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { useAppTheme } from '../../themes';
 
 const { width } = Dimensions.get('window');
 
 interface GoogleSignUpButtonProps {
   onPress: () => void;
   title: String;
-  testID?: string;
 }
 
 const GoogleSignUpButton: React.FC<GoogleSignUpButtonProps> = ({
   onPress,
   title,
-  testID,
 }) => {
-  const { colors } = useAppTheme();
-  
   return (
     <TouchableOpacity
-      testID={testID || "google-button"}
-      style={[styles.button, { 
-        borderColor: colors.border,
-        backgroundColor: colors.surface 
-      }]}
+      style={styles.button}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -39,7 +30,7 @@ const GoogleSignUpButton: React.FC<GoogleSignUpButtonProps> = ({
         }}
         style={styles.icon}
       />
-      <Text style={[styles.buttonText, { color: colors.text }]}>{title}</Text>
+      <Text style={styles.buttonText}>{title}</Text>
     </TouchableOpacity>
   );
 };
@@ -49,16 +40,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: width * 0.9,
+    width: width * 0.9, // 80% of screen width
     paddingVertical: 12,
+    backgroundColor: 'transparent',
     borderWidth: 1,
+    borderColor: '#dbdbdb',
     borderRadius: 8,
     marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   icon: {
     width: 24,
@@ -68,6 +56,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#333',
   },
 });
 

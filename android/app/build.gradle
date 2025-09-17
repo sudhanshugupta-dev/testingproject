@@ -109,11 +109,6 @@ android {
     }
 }
 
-configurations.all {
-    exclude group: 'com.android.support', module: 'support-compat'
-    exclude group: 'com.android.support', module: 'support-v4'
-}
-
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -125,11 +120,12 @@ dependencies {
     }
     implementation platform('com.google.firebase:firebase-bom:33.1.0') // Use the latest BoM version
     implementation 'com.google.firebase:firebase-messaging'
-    implementation 'me.leolin:ShortcutBadger:1.1.22'
 //   implementation 'com.google.firebase:firebase-analytics'
 //   implementation 'com.google.firebase:firebase-auth'
 //   implementation 'com.google.firebase:firebase-database'
-  implementation 'com.google.android.gms:play-services-base:18.5.0'
+  implementation('com.google.android.gms:play-services-base:18.5.0') {
+    exclude group: 'com.android.support'
+  }
   implementation 'com.facebook.fresco:animated-gif:3.2.0'
   // For WebP support (optional, for stickers)
   implementation 'com.facebook.fresco:animated-webp:3.2.0'

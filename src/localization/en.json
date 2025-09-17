@@ -92,5 +92,20 @@
     "noRequests": "No friend requests",
     "noSuggestedUsers": "No suggested users",
     "noSentRequests": "No sent requests"
+  },
+  "recentChats": {
+    "title": "Recent Chats",
+    "noRecentChats": "No recent chats",
+    "open": "Open",
+    "cancel": "Cancel"
+  },
+  "shortcuts": {
+    "recentChats": "Recent Chats",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "openCamera": "Open Camera",
+    "openGallery": "Open Gallery",
+    "takePhotoWithCamera": "Take a photo with your camera",
+    "selectPhotoFromGallery": "Select a photo from your gallery"
   }
 }

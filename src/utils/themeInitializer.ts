@@ -25,7 +25,7 @@ export const getInitialTheme = async (): Promise<'light' | 'dark'> => {
   }
 };
 
-// Synchronous version for immediate use (less reliable but faster)
+// Synchronous version for immediate use (less reliable but fastebr)
 export const getInitialThemeSync = (): 'light' | 'dark' => {
   try {
     const systemTheme = Appearance.getColorScheme();

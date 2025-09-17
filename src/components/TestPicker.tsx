@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import PickerBottomSheet from '../components/PickerBottomSheet';
 
-const TestPicker = ({ testID }: { testID?: string }) => {
+const TestPicker = () => {
   const [visible, setVisible] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
 
   return (
-    <View testID={testID || "test-picker"} style={styles.container}>
+    <View style={styles.container}>
       <TouchableOpacity 
         style={styles.button}
         onPress={() => {

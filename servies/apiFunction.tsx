@@ -11,18 +11,17 @@ export const dummyApiCall = async (data: string) => {
     });
 
     const json = await response.json();
-    console.log(json);
     return { success: true };
-    console.log('Success', 'Data sent successfully!');
+    console.warn('Success', 'Data sent successfully!');
   } catch (error) {
     console.error('Error:', error);
-    console.log('Error', 'Something went wrong!');
+    console.warn('Error', 'Something went wrong!');
   }
 };
 
 export const handleButtonPress = (inputValue: any, navigation: any) => {
   if (inputValue.trim() === '') {
-    console.log('Validation Error', 'Please enter a value');
+    console.warn('Validation Error', 'Please enter a value');
   } else {
     navigation.navigate('Content')
     dummyApiCall(inputValue);

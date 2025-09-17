@@ -25,5 +25,20 @@
     "sticker": "Autocollant",
     "file": "Fichier",
     "noMessages": "Aucun message encore"
+  },
+  "recentChats": {
+    "title": "Conversations récentes",
+    "noRecentChats": "Aucune conversation récente",
+    "open": "Ouvrir",
+    "cancel": "Annuler"
+  },
+  "shortcuts": {
+    "recentChats": "Conversations récentes",
+    "camera": "Appareil photo",
+    "gallery": "Galerie",
+    "openCamera": "Ouvrir l'appareil photo",
+    "openGallery": "Ouvrir la galerie",
+    "takePhotoWithCamera": "Prendre une photo avec l'appareil photo",
+    "selectPhotoFromGallery": "Sélectionner une photo dans la galerie"
   }
 } 

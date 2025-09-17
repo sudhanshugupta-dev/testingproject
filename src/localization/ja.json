@@ -15,5 +15,30 @@
   "tabs": { "chat": "チャット", "requests": "リクエスト", "profile": "プロフィール" },
   "profile": { "logout": "ログアウト", "theme": "テーマ", "language": "言語" },
   "language": { "select": "言語を選択", "english": "英語", "hindi": "ヒンディー語", "spanish": "スペイン語", "french": "フランス語", "japanese": "日本語" },
-  "chat": { "typeMessage": "メッセージを入力", "send": "送信" }
+  "chat": { 
+    "typeMessage": "メッセージを入力", 
+    "send": "送信",
+    "voiceMessage": "ボイスメッセージ",
+    "photo": "写真",
+    "video": "動画",
+    "gif": "GIF",
+    "sticker": "ステッカー",
+    "file": "ファイル",
+    "noMessages": "メッセージはまだありません"
+  },
+  "recentChats": {
+    "title": "最近のチャット",
+    "noRecentChats": "最近のチャットはありません",
+    "open": "開く",
+    "cancel": "キャンセル"
+  },
+  "shortcuts": {
+    "recentChats": "最近のチャット",
+    "camera": "カメラ",
+    "gallery": "ギャラリー",
+    "openCamera": "カメラを開く",
+    "openGallery": "ギャラリーを開く",
+    "takePhotoWithCamera": "カメラで写真を撮る",
+    "selectPhotoFromGallery": "ギャラリーから写真を選択"
+  }
 } 

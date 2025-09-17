@@ -162,12 +162,12 @@ const CustomTabBar = ({ state, descriptors, navigation, keyboardVisible, unreadC
                 ]}
                 onTouchEnd={onPress}
               >
-                <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <View>
                   <AnimatedIcon 
                     name={getIconName()} 
                     color={isFocused ? colors.primary : colors.textSecondary} 
                     focused={isFocused}
-                    size={22}
+                    size={26}
                   />
                   {route.name === 'Chat' && unreadCount > 0 && (
                     <View style={styles.badge}>
@@ -323,22 +323,22 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    right: -6,
-    top: -4,
+    right: 8,
+    top: 4,
     backgroundColor: 'red',
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: 4,
     borderWidth: 2,
     borderColor: colors.card,
     zIndex: 10,
   },
   badgeText: {
     color: 'white',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
     textAlign: 'center',
   },

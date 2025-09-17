@@ -36,6 +36,12 @@ allprojects {
             }
         }
     }
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.16.0'
+        }
+        exclude group: 'com.android.support'
+    }
 }
 
 apply plugin: "com.facebook.react.rootproject"

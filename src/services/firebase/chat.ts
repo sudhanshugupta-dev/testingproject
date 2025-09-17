@@ -30,12 +30,10 @@ export const getOrCreateChatRoom = async (
   userId2: string,
 ): Promise<string> => {
   try {
-    console.log("Creating/getting chat room for users:", userId1, userId2);
-    
+  
     // Generate consistent room ID (sorted to ensure same room for both users)
     const roomId = generateRoomId(userId1, userId2);
-    console.log("Generated room ID:", roomId);
-    
+
     // Check if room already exists
     const roomRef = firestore().collection('rooms').doc(roomId);
     const roomDoc = await roomRef.get();
@@ -871,25 +869,109 @@ export const pinMessage = async (
   }
 };
 
-// Forward a message to multiple friends
+// // Forward a message to multiple friends
+// export const forwardMessage = async (
+//   originalMessage: Message,
+//   friendIds: string[],
+//   currentUserId: string,
+//   forwarded : boolean,
+// ): Promise<void> => {
+//   try {
+//     const batch = firestore().batch();
+//     const serverTimestamp = firestore.FieldValue.serverTimestamp();
+
+//     console.log("original  message", currentUserId, forwarded)
+//     for (const friendId of friendIds) {
+//       // Get or create room for each friend
+//       console.log("firendId", friendId)
+//       const roomId = generateRoomId(currentUserId, friendId);
+//       const roomRef = firestore().collection('rooms').doc(roomId);
+//       const messageRef = roomRef.collection('messages').doc();
+
+//       // Create forwarded message
+//       const forwardedMessage: Message = {
+//         text: originalMessage.text,
+//         senderId: currentUserId,
+//         receiverId: friendId,
+//         createdAt: serverTimestamp,
+//         messageType: originalMessage.messageType || 'text',
+//         status: 'sent',
+//         media: originalMessage.media || [],
+//         isSeen: false,
+//         seenBy: {
+//           [currentUserId]: true,
+//           [friendId]: false
+//         },
+//         forwardedFrom: {
+//           messageId: originalMessage.id || '',
+//           roomId: originalMessage.id?.split('_')[0] || '', // Extract original room from message context
+//           originalSenderId: originalMessage.senderId,
+//           forwardedAt: serverTimestamp
+//         }
+//       };
+
+//       batch.set(messageRef, forwardedMessage);
+
+//       console.log("forwoard messsafe", forwardedMessage)
+//       // Update room's last message
+//       const lastMessageText = originalMessage.text || 
+//         (originalMessage.messageType === 'image' ? '📷 Forwarded Image' :
+//          originalMessage.messageType === 'video' ? '🎥 Forwarded Video' : 
+//          '📄 Forwarded Message');
+
+//       batch.set(roomRef, {
+//         participants: [currentUserId, friendId],
+//         lastMessage: lastMessageText,
+//         lastMessageAt: serverTimestamp,
+//         createdAt: serverTimestamp
+//       }, { merge: true });
+
+//       // Update chats collection
+//       const chatDocs = await firestore()
+//         .collection('chats')
+//         .where('roomId', '==', roomId)
+//         .get();
+
+//       chatDocs.forEach(doc => {
+//         batch.update(doc.ref, {
+//           lastMessage: lastMessageText,
+//           lastMessageAt: serverTimestamp,
+//           ...(doc.id.startsWith(currentUserId) ? {} : { 
+//             unreadCount: firestore.FieldValue.increment(1) 
+//           })
+//         });
+//       });
+//     }
+
+//     await batch.commit();
+//     console.log('Message forwarded successfully to', friendIds.length, 'friends');
+//   } catch (error: any) {
+//     console.error('Error forwarding message:', error);
+//     throw error;
+//   }
+// };
+
+
 export const forwardMessage = async (
   originalMessage: Message,
   friendIds: string[],
-  currentUserId: string
+  currentUserId: string,
+  forwarded?: boolean // optional now
 ): Promise<void> => {
+  if (!friendIds.length) return;
+
   try {
     const batch = firestore().batch();
     const serverTimestamp = firestore.FieldValue.serverTimestamp();
 
     for (const friendId of friendIds) {
-      // Get or create room for each friend
       const roomId = generateRoomId(currentUserId, friendId);
       const roomRef = firestore().collection('rooms').doc(roomId);
       const messageRef = roomRef.collection('messages').doc();
 
-      // Create forwarded message
+      // Build forwarded message
       const forwardedMessage: Message = {
-        text: originalMessage.text,
+        text: originalMessage.text || '',
         senderId: currentUserId,
         receiverId: friendId,
         createdAt: serverTimestamp,
@@ -901,53 +983,69 @@ export const forwardMessage = async (
           [currentUserId]: true,
           [friendId]: false
         },
-        forwardedFrom: {
-          messageId: originalMessage.id || '',
-          roomId: originalMessage.id?.split('_')[0] || '', // Extract original room from message context
-          originalSenderId: originalMessage.senderId,
-          forwardedAt: serverTimestamp
-        }
+        // Only include forwardedFrom if forwarded flag is true
+        ...(forwarded
+          ? {
+              forwardedFrom: {
+                messageId: originalMessage.id || '',
+                roomId: originalMessage.roomId || roomId,
+                originalSenderId: originalMessage.senderId,
+                forwardedAt: serverTimestamp
+              }
+            }
+          : {})
       };
 
       batch.set(messageRef, forwardedMessage);
 
-      // Update room's last message
-      const lastMessageText = originalMessage.text || 
-        (originalMessage.messageType === 'image' ? '📷 Forwarded Image' :
-         originalMessage.messageType === 'video' ? '🎥 Forwarded Video' : 
-         '📄 Forwarded Message');
+      // Determine last message text for room display
+      const lastMessageText =
+        originalMessage.text ||
+        (originalMessage.messageType === 'image'
+          ? '📷 Forwarded Image'
+          : originalMessage.messageType === 'video'
+          ? '🎥 Forwarded Video'
+          : '📄 Forwarded Message');
 
-      batch.set(roomRef, {
-        participants: [currentUserId, friendId],
-        lastMessage: lastMessageText,
-        lastMessageAt: serverTimestamp,
-        createdAt: serverTimestamp
-      }, { merge: true });
+      // Update room info
+      batch.set(
+        roomRef,
+        {
+          participants: [currentUserId, friendId],
+          lastMessage: lastMessageText,
+          lastMessageAt: serverTimestamp,
+          createdAt: serverTimestamp
+        },
+        { merge: true }
+      );
 
-      // Update chats collection
+      // Update chats collection (increment unread count for friend)
       const chatDocs = await firestore()
         .collection('chats')
         .where('roomId', '==', roomId)
         .get();
 
-      chatDocs.forEach(doc => {
+      chatDocs.forEach((doc) => {
         batch.update(doc.ref, {
           lastMessage: lastMessageText,
           lastMessageAt: serverTimestamp,
-          ...(doc.id.startsWith(currentUserId) ? {} : { 
-            unreadCount: firestore.FieldValue.increment(1) 
-          })
+          ...(doc.id.startsWith(currentUserId)
+            ? {}
+            : { unreadCount: firestore.FieldValue.increment(1) })
         });
       });
     }
 
     await batch.commit();
-    console.log('Message forwarded successfully to', friendIds.length, 'friends');
+    console.log(
+      `Message forwarded successfully to ${friendIds.length} friend(s)`
+    );
   } catch (error: any) {
     console.error('Error forwarding message:', error);
     throw error;
   }
 };
+
 
 // Get friends list for forwarding
 export const getFriendsList = async (userId: string): Promise<any[]> => {

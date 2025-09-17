@@ -13,10 +13,9 @@ interface ReplyMessageBarProps {
   };
   onCancel: () => void;
   currentUserId?: string;
-  testID?: string;
 }
 
-const ReplyMessageBar = ({ replyMessage, onCancel, currentUserId, testID }: ReplyMessageBarProps) => {
+const ReplyMessageBar = ({ replyMessage, onCancel, currentUserId }: ReplyMessageBarProps) => {
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   
@@ -29,8 +28,8 @@ const ReplyMessageBar = ({ replyMessage, onCancel, currentUserId, testID }: Repl
     : replyMessage.text;
 
   return (
-    <View testID={testID || "reply-bar"} style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.text + '22' }]}>
-      <View testID="reply-indicator" style={[styles.replyIndicator, { backgroundColor: colors.primary }]} />
+    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.text + '22' }]}>
+      <View style={[styles.replyIndicator, { backgroundColor: colors.primary }]} />
       <View style={styles.content}>
         <View style={styles.header}>
           <MaterialIcons 
@@ -47,7 +46,7 @@ const ReplyMessageBar = ({ replyMessage, onCancel, currentUserId, testID }: Repl
           {truncatedText}
         </Text>
       </View>
-      <Pressable testID="cancel-button" style={styles.cancelButton} onPress={onCancel}>
+      <Pressable style={styles.cancelButton} onPress={onCancel}>
         <MaterialIcons name="close" size={24} color={colors.text} />
       </Pressable>
     </View>

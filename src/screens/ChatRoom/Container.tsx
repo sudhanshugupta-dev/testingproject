@@ -375,7 +375,6 @@ const ChatRoomContainer = () => {
       const files = [{ uri, type, fileName }];
       const uploadedUrls = await uploadMultipleToCloudinary(files);
       
-      console.log('🎤 Voice upload completed:', uploadedUrls);
       updateOptimisticMessage(tempId, { uploadProgress: 90 });
 
       const payload: any = {
@@ -723,7 +722,6 @@ const ChatRoomContainer = () => {
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
-      console.log("item tyoe", item.messageType)
       if (item.type === "separator") {
         return (
           <View style={styles.separatorContainer}>
@@ -804,9 +802,6 @@ const ChatRoomContainer = () => {
             <Text style={[styles.friendName, { color: colors.text }]}>
               {friendName || t("chat.friend")}
             </Text>
-            {/* <Text style={[styles.roomInfo, { color: colors.text, opacity: 0.6 }]}>
-              Room: {roomId ? roomId.substring(0, 8) + "..." : t("chat.loading")}
-            </Text> */}
           </View>
         </View>
 

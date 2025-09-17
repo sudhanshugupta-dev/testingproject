@@ -9,6 +9,7 @@ export const uploadToCloudinary = async (
      const cloudName = 'dfqawghek';       // from Cloudinary console
     const uploadPreset = 'testProject_Preset'; // unsigned preset
     // fallback to detect from extension if type is missing
+
     console.log(file, "Processing file for upload")
     let mimeType = file.type;
     if (!mimeType) {
@@ -25,7 +26,7 @@ export const uploadToCloudinary = async (
       else mimeType = "image/jpeg"; // default
     }
 
-    console.log(file, "Detected mime type:", mimeType)
+    console.log("Detected mime type:", file.fileName)
     const formData: any = new FormData();
     formData.append("file", {
       uri: file.uri,
@@ -73,6 +74,7 @@ export const uploadMultipleToCloudinary = async (
   }[]
 ): Promise<string[]> => {
   try {
+  
     // Run uploads in parallel
     const uploadPromises = files.map(file => uploadToCloudinary(file));
 

@@ -25,5 +25,20 @@
     "sticker": "Sticker",
     "file": "Archivo",
     "noMessages": "Sin mensajes aún"
+  },
+  "recentChats": {
+    "title": "Chats recientes",
+    "noRecentChats": "No hay chats recientes",
+    "open": "Abrir",
+    "cancel": "Cancelar"
+  },
+  "shortcuts": {
+    "recentChats": "Chats recientes",
+    "camera": "Cámara",
+    "gallery": "Galería",
+    "openCamera": "Abrir cámara",
+    "openGallery": "Abrir galería",
+    "takePhotoWithCamera": "Tomar una foto con la cámara",
+    "selectPhotoFromGallery": "Seleccionar una foto de la galería"
   }
 }

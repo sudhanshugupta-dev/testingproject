@@ -13,7 +13,7 @@ type Props = {
   variant?: 'primary' | 'secondary' | 'danger';
 };
 
-const CustomButton = ({ title, onPress, style, disabled, loading, variant = 'primary', testID }: Props) => {
+const CustomButton = ({ title, onPress, style, disabled, loading, variant = 'primary' }: Props) => {
   const { colors, fonts } = useAppTheme();
 
   const getGradientColors = () => {
@@ -37,7 +37,7 @@ const CustomButton = ({ title, onPress, style, disabled, loading, variant = 'pri
     <View style={[styles.container, style]}>
       <Pressable 
         disabled={disabled || loading} 
-        testID={testID || 'custom-button'} 
+        testID={'custom-button'} 
         onPress={handlePress}
         style={({ pressed }) => [
           { 
@@ -53,7 +53,7 @@ const CustomButton = ({ title, onPress, style, disabled, loading, variant = 'pri
           style={[styles.btn, disabled && styles.disabled]}
         >
           {loading ? (
-            <ActivityIndicator testID="loading-indicator" color="#ffffff" size="small" />
+            <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <Text style={[
               styles.text, 

@@ -2,11 +2,11 @@ import React, { ReactNode } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useAppTheme } from '../../themes/useTheme';
 
-type Props = { children: ReactNode; style?: ViewStyle; testID?: string };
+type Props = { children: ReactNode; style?: ViewStyle };
 
-const Card = ({ children, style, testID }: Props) => {
+const Card = ({ children, style }: Props) => {
   const { colors } = useAppTheme();
-  return <View testID={testID} style={[styles.base, { backgroundColor: colors.card, borderColor: colors.text + '22' }, style]}>{children}</View>;
+  return <View style={[styles.base, { backgroundColor: colors.card, borderColor: colors.text + '22' }, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({

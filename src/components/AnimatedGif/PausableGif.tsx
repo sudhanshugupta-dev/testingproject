@@ -44,7 +44,7 @@ const PausableGif: React.FC<PausableGifProps> = ({
       setGifKey(prev => prev + 1);
     } else {
       // Pause: The GIF will be completely unmounted from the component tree
-      console.log('🎬 Pausing GIF animation');
+      console.warn('🎬 Pausing GIF animation');
     }
   };
 

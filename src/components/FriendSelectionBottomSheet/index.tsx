@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Ionicons';
 import CustomAvatar from '../CustomAvatar';
 import { getFriendsList, forwardMessage, Message } from '../../services/firebase/chat';
+// Cloudinary upload removed for local-forward flow
 
 interface Friend {
   id: string;
@@ -28,6 +29,8 @@ interface FriendSelectionBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   messageToForward: Message | null;
+  forwarded : boolean;
+  mediaToForward?: Array<{uri: string; type: string; fileName?: string}>;
   onForwardComplete?: (selectedFriends: Friend[]) => void;
 }
 
@@ -35,12 +38,15 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
   visible,
   onClose,
   messageToForward,
+  forwarded,
+  mediaToForward = [],
   onForwardComplete,
 }) => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [forwarding, setForwarding] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<Array<{ uri: string; type: string; fileName?: string }>>([]);
 
   const myId = useSelector((s: RootState) => s.auth.user?.uid);
   const { colors } = useAppTheme();
@@ -49,11 +55,11 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
   // Load friends list
   const loadFriends = useCallback(async () => {
     if (!myId || !visible) return;
-    
+
     setLoading(true);
     try {
       const friendsList = await getFriendsList(myId);
-      console.log("check it correct", friendsList);
+      console.log('check it correct', friendsList);
       setFriends(friendsList);
     } catch (error: any) {
       Alert.alert('Error', `Failed to load friends: ${error.message}`);
@@ -71,7 +77,7 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
 
   // Toggle friend selection
   const toggleFriendSelection = useCallback((friendId: string) => {
-    setSelectedFriends(prev => {
+    setSelectedFriends((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(friendId)) {
         newSet.delete(friendId);
@@ -82,72 +88,104 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
     });
   }, []);
 
-  // Handle forward action
   const handleForward = useCallback(async () => {
-    if (!messageToForward || !myId || selectedFriends.size === 0) {
-      Alert.alert('Error', 'Please select at least one friend to forward to');
-      return;
-    }
-
+    if (!myId || selectedFriends.size === 0) return;
+  
     setForwarding(true);
+  
     try {
-      const selectedFriendIds = Array.from(selectedFriends);
-      await forwardMessage(messageToForward, selectedFriendIds, myId);
-      
-      const selectedFriendObjects = friends.filter(f => selectedFriends.has(f.id));
-      onForwardComplete?.(selectedFriendObjects);
-      
-      Alert.alert(
-        'Success', 
-        `Message forwarded to ${selectedFriends.size} friend${selectedFriends.size > 1 ? 's' : ''}`
-      );
+      const friendIds = Array.from(selectedFriends);
+  
+      let message: Message;
+  
+      // Case 1: Forward existing message
+      if (messageToForward) {
+        message = {
+          ...messageToForward,
+          createdAt: Date.now(),
+          senderId: myId,
+          status: 'sending',
+          isSeen: false,
+          seenBy: { [myId]: true },
+        };
+      } 
+      // Case 2: Forward media files
+      else if (mediaToForward.length > 0) {
+        message = {
+          text: '',
+          senderId: myId,
+          receiverId: friendIds[0],
+          createdAt: Date.now(),
+          messageType:
+            mediaToForward.length > 1
+              ? 'mixed'
+              : mediaToForward[0].type.includes('image')
+              ? 'image'
+              : 'file',
+          media: mediaToForward.map((file) => ({ uri: file.uri, type: file.type })),
+          isSeen: false,
+          seenBy: { [myId]: true },
+          status: 'sending',
+        };
+      } else {
+        return; // Nothing to forward
+      }
+  
+      // Send message to all selected friends
+      await forwardMessage(message, friendIds, myId, false);
+  
+      onForwardComplete?.(friends.filter((f) => selectedFriends.has(f.id)));
       onClose();
     } catch (error: any) {
-      Alert.alert('Error', `Failed to forward message: ${error.message}`);
+      console.error('Error forwarding message/media:', error);
+      Alert.alert('Error', 'Failed to forward message or media');
     } finally {
       setForwarding(false);
     }
-  }, [messageToForward, myId, selectedFriends, friends, onForwardComplete, onClose]);
-
+  }, [messageToForward, mediaToForward, myId, selectedFriends, friends, onForwardComplete, onClose]);
+  
   // Render friend item
-  const renderFriendItem = useCallback(({ item }: { item: Friend }) => {
-    const isSelected = selectedFriends.has(item.id);
-    
-    return (
-      <TouchableOpacity
-        style={[
-          styles.friendItem,
-          { 
-            backgroundColor: colors.card,
-            borderColor: isSelected ? colors.primary : colors.text + '20'
-          }
-        ]}
-        onPress={() => toggleFriendSelection(item.id)}
-        activeOpacity={0.7}
-      >
-        <CustomAvatar name={item.name} size={50} />
-        <View style={styles.friendInfo}>
-          <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={[styles.friendEmail, { color: colors.text + '80' }]} numberOfLines={1}>
-            {item.email}
-          </Text>
-        </View>
-        <View style={[
-          styles.selectionIndicator,
-          { 
-            backgroundColor: isSelected ? colors.primary : 'transparent',
-            borderColor: isSelected ? colors.primary : colors.text + '40'
-          }
-        ]}>
-          {isSelected && (
-            <Icon name="checkmark" size={16} color="#fff" />
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  }, [selectedFriends, colors, toggleFriendSelection]);
+  const renderFriendItem = useCallback(
+    ({ item }: { item: Friend }) => {
+      const isSelected = selectedFriends.has(item.id);
+
+      return (
+        <TouchableOpacity
+          style={[
+            styles.friendItem,
+            {
+              backgroundColor: colors.card,
+              borderColor: isSelected ? colors.primary : colors.text + '20',
+            },
+          ]}
+          onPress={() => toggleFriendSelection(item.id)}
+          activeOpacity={0.7}
+        >
+          <CustomAvatar name={item.name} size={50} />
+          <View style={styles.friendInfo}>
+            <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={[styles.friendEmail, { color: colors.text + '80' }]} numberOfLines={1}>
+              {item.email}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.selectionIndicator,
+              {
+                backgroundColor: isSelected ? colors.primary : 'transparent',
+                borderColor: isSelected ? colors.primary : colors.text + '40',
+              },
+            ]}
+          >
+            {isSelected && <Icon name="checkmark" size={16} color="#fff" />}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [selectedFriends, colors, toggleFriendSelection]
+  );
 
   return (
     <Modal

@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import me.leolin.shortcutbadger.ShortcutBadger
+// Removed ShortcutBadger to avoid AndroidX/support conflicts
 
 class AppFirebaseMessagingService : FirebaseMessagingService() {
   override fun onMessageReceived(message: RemoteMessage) {
@@ -23,15 +23,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
   }
 
   private fun updateAppIconBadge(context: Context, count: Int) {
-    try {
-      if (count > 0) {
-        ShortcutBadger.applyCount(context, count)
-      } else {
-        ShortcutBadger.removeCount(context)
-      }
-    } catch (e: Exception) {
-      Log.e("Badge", "Failed to update badge", e)
-    }
+    // No-op: ShortcutBadger removed. Implement OEM-specific badges if needed.
+    Log.d("Badge", "Badge count update requested: $count (no-op)")
   }
 }
 

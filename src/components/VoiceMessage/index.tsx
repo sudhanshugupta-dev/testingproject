@@ -10,10 +10,6 @@ import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 // Import react-native-nitro-sound correctly
 import Sound from 'react-native-nitro-sound';
 
-console.log('🎤 VoiceMessage component loaded');
-console.log('🎤 Sound import type:', typeof Sound);
-console.log('🎤 Sound methods available:', Object.getOwnPropertyNames(Sound));
-
 interface VoiceMessageProps {
   onSend?: (uri: string) => void;
   onCancel?: () => void;
@@ -59,7 +55,7 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
         Sound.removeRecordBackListener();
         Sound.removePlayBackListener();
       } catch (e) {
-        console.log('🎤 Cleanup error:', e);
+        console.warn('🎤 Cleanup error:', e);
       }
     };
   }, []);
@@ -87,13 +83,9 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
     }
 
     try {
-      console.log('🎤 Starting recording with Sound singleton...');
-      
       // Use Sound singleton directly (not as constructor)
       // Start recording using the singleton instance
-      const recordingPath = await Sound.startRecorder();
-      console.log('🎤 Recording started at:', recordingPath);
-      
+      const recordingPath = await Sound.startRecorder();  
       // Store the path for later use
       soundRef.current = recordingPath;
       
@@ -103,7 +95,6 @@ const VoiceMessage: React.FC<VoiceMessageProps> = ({ onSend, onCancel, autoStart
       
       // Set up recording progress listener
       Sound.addRecordBackListener((e: any) => {
-        console.log('🎤 Recording progress:', e.currentPosition);
         const timeString = Sound.mmssss(Math.floor(e.currentPosition));
         setRecordTime(timeString);
         elapsedTimeRef.current = Math.floor(e.currentPosition / 1000);

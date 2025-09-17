@@ -65,5 +65,20 @@
     "sendRequest": "निवेदन भेजें",
     "noRequests": "कोई दोस्त निवेदन नहीं",
     "noSuggestedUsers": "कोई सुझाए गए उपयोगकर्ता नहीं"
+  },
+  "recentChats": {
+    "title": "हाल की चैट",
+    "noRecentChats": "कोई हाल की चैट नहीं",
+    "open": "खोलें",
+    "cancel": "रद्द करें"
+  },
+  "shortcuts": {
+    "recentChats": "हाल की चैट",
+    "camera": "कैमरा",
+    "gallery": "गैलरी",
+    "openCamera": "कैमरा खोलें",
+    "openGallery": "गैलरी खोलें",
+    "takePhotoWithCamera": "कैमरे से फोटो लें",
+    "selectPhotoFromGallery": "गैलरी से फोटो चुनें"
   }
 }
