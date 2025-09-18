@@ -44,6 +44,23 @@ const QuickActionHandler = ({
     try {
       let info: any = null;
 
+
+
+       // Camera
+    if (actionType === 'camera') {
+      openCamera()
+        .then((asset) => asset && onImageSelected([asset]))
+        .catch(console.warn);
+      return;
+    }
+
+    // Gallery
+    if (actionType === 'gallery') {
+      openGallery()
+        .then((asset) => asset && onImageSelected([asset]))
+        .catch(console.warn);
+      return;
+    }
       // userInfo as string
       if (typeof userInfo === 'string' && userInfo.trim().length > 0) {
         try {
@@ -79,21 +96,7 @@ const QuickActionHandler = ({
       console.warn('QuickAction parse error:', e);
     }
 
-    // Camera
-    if (actionType === 'camera') {
-      openCamera()
-        .then((asset) => asset && onImageSelected([asset]))
-        .catch(console.warn);
-      return;
-    }
-
-    // Gallery
-    if (actionType === 'gallery') {
-      openGallery()
-        .then((asset) => asset && onImageSelected([asset]))
-        .catch(console.warn);
-      return;
-    }
+   
   };
 
   // Navigate when ready
