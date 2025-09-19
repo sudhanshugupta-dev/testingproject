@@ -224,10 +224,9 @@ let unsubscribeChatList: (() => void) | null = null;
  */
 export const startChatListListener = () => (dispatch: AppDispatch) => {
   dispatch(setLoading(true));
-  console.log("start searching about it ");
+ 
   try {
     unsubscribeChatList?.(); // clear previous listener
-    console.log("we are going right way")
     unsubscribeChatList = listenToChatList(chatList => {
       dispatch(setChats(chatList));
       dispatch(setLoading(false));
