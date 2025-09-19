@@ -147,7 +147,8 @@ Build and archive using Xcode, then distribute via App Store Connect.
 
 *Add your license information here*
 
-## 📞 Support
+## 📞 Test Jest run 
+example = >   npx jest componentUnitTest/VoiceMessage.test.tsx --config jest.config.js
 
 For support and questions, please open an issue in the repository.
 

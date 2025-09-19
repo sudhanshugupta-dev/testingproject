@@ -53,7 +53,7 @@ const CustomButton = ({ title, onPress, style, disabled, loading, variant = 'pri
           style={[styles.btn, disabled && styles.disabled]}
         >
           {loading ? (
-            <ActivityIndicator color="#ffffff" size="small" />
+            <ActivityIndicator testID="loading-indicator" color="#ffffff" size="small" />
           ) : (
             <Text style={[
               styles.text, 

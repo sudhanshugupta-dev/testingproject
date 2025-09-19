@@ -336,12 +336,12 @@ export const sendFriendRequest = async (toUserId: string): Promise<void> => {
     const fromData = fromUserDoc.data() as any;
     const toData = toUserDoc.data() as any;
 
-    if (
-      (fromData?.sent && fromData.sent[toUserId]) ||
-      (toData?.received && toData.received[fromUserId])
-    ) {
-      throw new Error('A friend request already exists');
-    }
+   if (
+  (fromData?.sent && fromData.sent[toUserId] && fromData.sent[toUserId] !== 'declined') ||
+  (toData?.received && toData.received[fromUserId] && toData.received[fromUserId] !== 'declined')
+) {
+  throw new Error('A friend request already exists');
+}
 
     // ✅ Use batch for atomic writes
     const batch = db.batch();

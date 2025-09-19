@@ -12,17 +12,20 @@ const { width } = Dimensions.get('window');
 interface GoogleSignUpButtonProps {
   onPress: () => void;
   title: String;
+  testID?: string;
 }
 
 const GoogleSignUpButton: React.FC<GoogleSignUpButtonProps> = ({
   onPress,
   title,
+  testID = 'google-button',
 }) => {
   return (
     <TouchableOpacity
       style={styles.button}
       onPress={onPress}
       activeOpacity={0.7}
+      testID={testID}
     >
       <Image
         source={{

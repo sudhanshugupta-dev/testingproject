@@ -39,6 +39,31 @@ jest.mock('@react-native-firebase/firestore', () => {
   return firestore;
 });
 
+// Mock push notifications modules used only in app runtime
+jest.mock('react-native-push-notification', () => ({
+  configure: jest.fn(),
+  localNotification: jest.fn(),
+  cancelAllLocalNotifications: jest.fn(),
+}));
+jest.mock('@react-native-community/push-notification-ios', () => ({
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  setApplicationIconBadgeNumber: jest.fn(),
+}));
+
+// Mock react-native-fs used by downloadService
+jest.mock('react-native-fs', () => ({
+  DocumentDirectoryPath: '/mock/documents',
+  DownloadDirectoryPath: '/mock/downloads',
+  exists: jest.fn().mockResolvedValue(false),
+  stat: jest.fn().mockResolvedValue({ size: 123 }),
+  readDir: jest.fn().mockResolvedValue([]),
+  unlink: jest.fn().mockResolvedValue(undefined),
+  downloadFile: jest.fn().mockReturnValue({
+    promise: Promise.resolve({ statusCode: 200 }),
+  }),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { changeLanguage: () => new Promise(() => {}) } }),
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -66,3 +91,10 @@ jest.mock('react-native-permissions', () => ({
   },
   RESULTS: { GRANTED: 'granted' },
 })); 
+
+// Mock react-native-modal to a simple passthrough component
+jest.mock('react-native-modal', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return ({ children, ...props }) => <View {...props}>{children}</View>;
+});

@@ -205,6 +205,11 @@ import {
 import { useAppTheme } from "../../themes/useTheme";
 import { useTranslation } from "react-i18next";
 import Video from "react-native-video";
+import ImageRenderer from "./ImageRenderer";
+import VideoRenderer from "./VideoRenderer";
+import GifRenderer from "./GifRenderer";
+import LoadingIndicator from "../LoadingIndicator/LoadingIndicator";
+import VoiceMessageBubble from "../VoiceMessageBubble";
 
 interface MediaItem {
   uri: string;
@@ -224,6 +229,11 @@ interface ChatBubbleProps {
   };
   onLongPress?: () => void;
   currentUserId?: string;
+  isUploading?: boolean;
+  uploadProgress?: number;
+  uploadError?: string;
+  messageType?: 'text' | 'voice' | 'sticker' | 'media';
+  testID?: string;
 }
 
 const formatTime = (timestamp?: number): string => {
@@ -240,6 +250,11 @@ const ChatBubble = ({
   replyTo,
   onLongPress,
   currentUserId,
+  isUploading,
+  uploadProgress,
+  uploadError,
+  messageType = 'text',
+  testID = 'chat-bubble',
 }: ChatBubbleProps) => {
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -283,45 +298,24 @@ const ChatBubble = ({
   const renderMedia = () => {
     if (!media || media.length === 0) return null;
 
+    const imageItems = media.filter(m => (m.type || '').startsWith('image') && !(m.type || '').includes('gif'));
+    const gifItems = media.filter(m => (m.type || '').includes('gif'));
+    const videoItems = media.filter(m => (m.type || '').startsWith('video'));
+
     return (
       <View style={styles.mediaContainer}>
-        {media.map((file, index) => {
-          const mimeType = file?.type || "";
-          const isImage = mimeType.startsWith("image");
-          const isVideo = mimeType.startsWith("video");
-
-          if (isImage) {
-            return (
-              <Pressable key={index} onPress={() => setPreviewMedia(file)}>
-                <Image
-                  source={{ uri: file.uri }}
-                  style={styles.mediaImage}
-                  resizeMode="cover"
-                />
-              </Pressable>
-            );
-          }
-
-          if (isVideo) {
-            return (
-              <Pressable key={index} onPress={() => setPreviewMedia(file)}>
-                <Video
-                  source={{ uri: file.uri }}
-                  style={styles.mediaVideo}
-                  paused
-                  resizeMode="cover"
-                />
-                <Text style={styles.videoLabel}>▶ Tap to Play</Text>
-              </Pressable>
-            );
-          }
-
-          return (
-            <Text key={index} style={{ color: "red" }}>
-              Unsupported file
-            </Text>
-          );
-        })}
+        {imageItems.length > 0 && (
+          <ImageRenderer media={imageItems as any} onPreview={setPreviewMedia as any} />
+        )}
+        {gifItems.length > 0 && (
+          <GifRenderer media={gifItems as any} onPreview={setPreviewMedia as any} />
+        )}
+        {videoItems.length > 0 && (
+          <VideoRenderer media={videoItems as any} onPreview={setPreviewMedia as any} />
+        )}
+        {imageItems.length === 0 && gifItems.length === 0 && videoItems.length === 0 && (
+          <Text style={{ color: 'red' }}>Unsupported file</Text>
+        )}
       </View>
     );
   };
@@ -343,6 +337,7 @@ const ChatBubble = ({
           ]}
           onLongPress={onLongPress}
           delayLongPress={500}
+          testID={testID}
         >
           {renderReplyContext()}
 
@@ -356,6 +351,19 @@ const ChatBubble = ({
               {text}
             </Text>
           ) : null}
+
+          {/* Loading / Error states */}
+          {Boolean(isUploading) && (
+            <LoadingIndicator type="image" progress={uploadProgress || 0} size="small" showText />
+          )}
+          {Boolean(uploadError) && (
+            <Text style={{ color: 'red' }}>{`Upload failed: ${uploadError}`}</Text>
+          )}
+
+          {/* Voice message */}
+          {messageType === 'voice' && media && media[0] && (
+            <VoiceMessageBubble audioUri={media[0].uri} isMine={isMine} />
+          )}
 
           {renderMedia()}
 

@@ -7,7 +7,7 @@ const TestPicker = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="test-picker">
       <TouchableOpacity 
         style={styles.button}
         onPress={() => {
