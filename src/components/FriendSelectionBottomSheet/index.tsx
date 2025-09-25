@@ -29,7 +29,7 @@ interface FriendSelectionBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   messageToForward: Message | null;
-  forwarded : boolean;
+  forwarded: boolean;
   mediaToForward?: Array<{uri: string; type: string; fileName?: string}>;
   onForwardComplete?: (selectedFriends: Friend[]) => void;
 }
@@ -95,12 +95,11 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
   
     try {
       const friendIds = Array.from(selectedFriends);
+      const selectedFriendsList = friends.filter((f) => selectedFriends.has(f.id));
   
-      let message: Message;
-  
-      // Case 1: Forward existing message
-      if (messageToForward) {
-        message = {
+      if (forwarded && messageToForward) {
+        // Forward existing message
+        let message: Message = {
           ...messageToForward,
           createdAt: Date.now(),
           senderId: myId,
@@ -108,10 +107,11 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
           isSeen: false,
           seenBy: { [myId]: true },
         };
-      } 
-      // Case 2: Forward media files
-      else if (mediaToForward.length > 0) {
-        message = {
+        
+        await forwardMessage(message, friendIds, myId, true);
+      } else if (mediaToForward.length > 0) {
+        // Forward media files
+        let message: Message = {
           text: '',
           senderId: myId,
           receiverId: friendIds[0],
@@ -127,14 +127,18 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
           seenBy: { [myId]: true },
           status: 'sending',
         };
+        
+        await forwardMessage(message, friendIds, myId, false);
+      } else if (!forwarded) {
+        // Adding members to group - just return selected friends
+        onForwardComplete?.(selectedFriendsList);
+        onClose();
+        return;
       } else {
         return; // Nothing to forward
       }
   
-      // Send message to all selected friends
-      await forwardMessage(message, friendIds, myId, false);
-  
-      onForwardComplete?.(friends.filter((f) => selectedFriends.has(f.id)));
+      onForwardComplete?.(selectedFriendsList);
       onClose();
     } catch (error: any) {
       console.error('Error forwarding message/media:', error);
@@ -142,7 +146,7 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
     } finally {
       setForwarding(false);
     }
-  }, [messageToForward, mediaToForward, myId, selectedFriends, friends, onForwardComplete, onClose]);
+  }, [messageToForward, mediaToForward, myId, selectedFriends, friends, forwarded, onForwardComplete, onClose]);
   
   // Render friend item
   const renderFriendItem = useCallback(
@@ -199,7 +203,7 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.text + '20' }]}>
             <Text style={[styles.title, { color: colors.text }]}>
-              Forward Message
+              {forwarded ? 'Forward Message' : 'Add Members'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Icon name="close" size={24} color={colors.text} />
@@ -278,9 +282,9 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
-                  <Icon name="arrow-redo" size={16} color="#fff" />
+                  <Icon name={forwarded ? "arrow-redo" : "person-add"} size={16} color="#fff" />
                   <Text style={styles.forwardButtonText}>
-                    Forward ({selectedFriends.size})
+                    {forwarded ? `Forward (${selectedFriends.size})` : `Add (${selectedFriends.size})`}
                   </Text>
                 </>
               )}

@@ -27,6 +27,9 @@ import {
   deleteMessage,
   pinMessage,
   Message,
+  createGroupChatRoom,
+  addMembersToGroup,
+  getGroupDetails,
 } from "../../services/firebase/chat";
 import downloadService from "../../services/downloadService";
 import ChatBubble from "../../components/ChatBubble";
@@ -89,7 +92,7 @@ const LeftAction = memo(function LeftAction({
 
 const ChatRoomContainer = () => {
   const route = useRoute<any>();
-  const { friendId, friendName } = route.params || {};
+  const { friendId, friendName, roomId: existingRoomId, isGroup, groupName } = route.params || {};
   const nav = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -111,6 +114,8 @@ const ChatRoomContainer = () => {
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<Map<string, any>>(new Map());
+  const [addMembersBottomSheetVisible, setAddMembersBottomSheetVisible] = useState(false);
+  const [groupDetails, setGroupDetails] = useState<any>(null);
 
   const { colors, mode } = useAppTheme();
   const styles = createStyles(mode);
@@ -249,30 +254,47 @@ const ChatRoomContainer = () => {
 
   // Init chat room
   useEffect(() => {
-    if (!myId || !friendId) {
-      setError("Invalid user or friend ID");
+    if (!myId) {
+      setError("User not authenticated");
       return;
     }
 
+    if (!existingRoomId && !friendId) {
+      setError("Invalid room or friend ID");
+      return;
+    }
 
     const initializeChat = async () => {
       try {
-        // Load cached room ID and messages first
-        const cachedRoomId = await loadCachedRoomId();
+        let chatRoomId: string;
         
-        if (cachedRoomId) {
-          // If we have cached room ID, we already loaded cached messages
-          // No need to show loading at all
-          setIsInitialFetch(false);
-        } else {
-          // Only show loading when creating new room
-          setIsInitialFetch(true);
-          const chatRoomId = await getOrCreateChatRoom(myId, friendId);
+        if (existingRoomId) {
+          // Use existing room ID (for group chats)
+          chatRoomId = existingRoomId;
           setRoomId(chatRoomId);
-          await saveRoomIdToCache(chatRoomId);
+          
+          // Load group details if it's a group chat
+          if (isGroup) {
+            const details = await getGroupDetails(chatRoomId);
+            setGroupDetails(details);
+          }
+          
           const hasLoadedCache = await loadCachedMessages(chatRoomId);
-          // Disable loading immediately after cache check
           setIsInitialFetch(!hasLoadedCache);
+        } else {
+          // Load cached room ID and messages first for individual chats
+          const cachedRoomId = await loadCachedRoomId();
+          
+          if (cachedRoomId) {
+            setIsInitialFetch(false);
+          } else {
+            setIsInitialFetch(true);
+            chatRoomId = await getOrCreateChatRoom(myId, friendId!);
+            setRoomId(chatRoomId);
+            await saveRoomIdToCache(chatRoomId);
+            const hasLoadedCache = await loadCachedMessages(chatRoomId);
+            setIsInitialFetch(!hasLoadedCache);
+          }
         }
       } catch (err: any) {
         setError(err.message || "Failed to load chat. Please try again.");
@@ -281,7 +303,7 @@ const ChatRoomContainer = () => {
     };
 
     initializeChat();
-  }, [myId, friendId, loadCachedRoomId, loadCachedMessages, saveRoomIdToCache]);
+  }, [myId, friendId, existingRoomId, isGroup, loadCachedRoomId, loadCachedMessages, saveRoomIdToCache]);
 
   // Listen for new messages
   useEffect(() => {
@@ -409,7 +431,6 @@ const ChatRoomContainer = () => {
       updateOptimisticMessage(tempId, {
         isUploading: false,
         uploadError: err.message || "Failed to send voice message",
-        uploadProgress: undefined,
       });
       
       Alert.alert("Error", `Failed to send voice message: ${err.message}`);
@@ -538,10 +559,12 @@ const ChatRoomContainer = () => {
       messageType,
       isUploading: selectedFiles.length > 0,
       uploadProgress: 0,
-      media: selectedFiles.length > 0 ? selectedFiles.map(file => ({ 
-        uri: file.uri, 
-        type: file.type 
-      })) : undefined,
+      ...(selectedFiles.length > 0 && {
+        media: selectedFiles.map(file => ({ 
+          uri: file.uri, 
+          type: file.type 
+        }))
+      }),
       ...(replyingTo && {
         replyTo: {
           messageId: replyingTo.id || "",
@@ -583,9 +606,10 @@ const ChatRoomContainer = () => {
       const payload: any = {
         text: currentText,
         senderId: myId,
-        receiverId: friendId,
+        receiverId: isGroup ? null : friendId, // No receiverId for group chats
         createdAt: currentTime,
         messageType,
+        isGroup: isGroup || false,
         ...(uploadedUrls.length > 0 && {
           media: uploadedUrls.map((url, i) => ({ uri: url, type: currentFiles[i].type })),
         }),
@@ -615,7 +639,6 @@ const ChatRoomContainer = () => {
       updateOptimisticMessage(tempId, {
         isUploading: false,
         uploadError: err.message || "Failed to send message",
-        uploadProgress: undefined,
       });
       
       Alert.alert("Error", `Failed to send message: ${err.message}`);
@@ -776,16 +799,40 @@ const ChatRoomContainer = () => {
     [myId, colors, handleLongPress]
   );
 
+  // Handle add members to group
+  const handleAddMembers = useCallback(async (selectedFriends: any[]) => {
+    if (!roomId || !myId || selectedFriends.length === 0) return;
+    
+    try {
+      const memberIds = selectedFriends.map(friend => friend.id);
+      await addMembersToGroup(roomId, memberIds, myId);
+      
+      // Refresh group details
+      if (isGroup) {
+        const details = await getGroupDetails(roomId);
+        setGroupDetails(details);
+      }
+      
+      Alert.alert('Success', `Added ${selectedFriends.length} member(s) to the group`);
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to add members: ${error.message}`);
+    }
+  }, [roomId, myId, isGroup]);
+
   // Mark as read when entering chat room
   useEffect(() => {
-    if (roomId && myId && friendId) {
+    if (roomId && myId) {
       // Mark messages as read in Firebase
       markMessagesAsRead(roomId, myId);
       
       // Mark chat as read in Redux store to update badge count
-      dispatch(markChatAsRead(friendId));
+      if (friendId) {
+        dispatch(markChatAsRead(friendId));
+      } else if (isGroup) {
+        dispatch(markChatAsRead(roomId));
+      }
     }
-  }, [roomId, myId, friendId, dispatch]);
+  }, [roomId, myId, friendId, isGroup, dispatch]);
 
   const showSend = text.trim().length > 0 || selectedFiles.length > 0;
 
@@ -797,11 +844,16 @@ const ChatRoomContainer = () => {
           <TouchableOpacity onPress={() => nav.goBack()}>
             <Icon name="arrow-back" size={30} color={colors.primary} />
           </TouchableOpacity>
-          <CustomAvatar name={friendName || "Unknown"} size={40} />
+          <CustomAvatar name={friendName || groupName || "Unknown"} size={40} />
           <View style={styles.headerTextContainer}>
             <Text style={[styles.friendName, { color: colors.text }]}>
-              {friendName || t("chat.friend")}
+              {isGroup ? (groupName || "Group") : (friendName || t("chat.friend"))}
             </Text>
+            {isGroup && groupDetails && (
+              <Text style={[styles.memberCount, { color: colors.text, opacity: 0.7, fontSize: 12 }]}>
+                {groupDetails.participants.length} members
+              </Text>
+            )}
           </View>
         </View>
 
@@ -895,6 +947,17 @@ const ChatRoomContainer = () => {
                   </View>
                 ))}
               </ScrollView>
+            )}
+
+            {/* Group Add Members Button - Positioned above input */}
+            {isGroup && (
+              <TouchableOpacity
+                style={[styles.addMembersButton, { backgroundColor: colors.primary }]}
+                onPress={() => setAddMembersBottomSheetVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Icon name="add" size={24} color="#fff" />
+              </TouchableOpacity>
             )}
 
             {/* Input Row - Fixed position */}
@@ -1023,10 +1086,20 @@ const ChatRoomContainer = () => {
             setMessageToForward(null);
           }}
           messageToForward={messageToForward}
+          forwarded={true}
           onForwardComplete={(selectedFriends) => {
             setForwardBottomSheetVisible(false);
             setMessageToForward(null);
           }}
+        />
+
+        {/* Friend Selection Bottom Sheet for Adding Members */}
+        <FriendSelectionBottomSheet
+          visible={addMembersBottomSheetVisible}
+          onClose={() => setAddMembersBottomSheetVisible(false)}
+          messageToForward={null}
+          forwarded={false}
+          onForwardComplete={handleAddMembers}
         />
       </View>
     </GestureHandlerRootView>

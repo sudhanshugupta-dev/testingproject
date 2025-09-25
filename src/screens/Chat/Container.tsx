@@ -9,14 +9,19 @@ import {
   Text,
   Pressable,
   TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Ionicons';
+import firestore from '@react-native-firebase/firestore';
 
 import { AppDispatch, RootState } from '../../redux/store';
+import { createGroupChatRoom, generateRoomId } from '../../services/firebase/chat';
+import { getFriends } from '../../services/firebase/requests';
+import FriendSelectionBottomSheet from '../../components/FriendSelectionBottomSheet';
 import {
   startChatListListener,
   stopChatListListener,
@@ -50,6 +55,8 @@ const ChatContainer = () => {
   const [search, setSearch] = useState('');
   const [initializing, setInitializing] = useState(true);
   const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
+  const [createGroupBottomSheetVisible, setCreateGroupBottomSheetVisible] = useState(false);
+  const [friendsList, setFriendsList] = useState<any[]>([]);
 
   // 🔹 Load stored recent chats on first mount
   useEffect(() => {
@@ -86,15 +93,42 @@ const ChatContainer = () => {
     }
   }, [list]);
 
-  // ✅ Start/stop chat listener
+  // ✅ Start/stop chat listener and load friends
   useEffect(() => {
     dispatch(startChatListListener());
+    loadFriends();
     setInitializing(false);
 
     return () => {
       dispatch(stopChatListListener());
     };
   }, [dispatch]);
+
+  // ✅ Load friends list
+  const loadFriends = async () => {
+    try {
+      const friendIds = await getFriends();
+      const friendsData = await Promise.all(
+        friendIds.map(async (friendId: string) => {
+          const userDoc = await firestore().collection('users').doc(friendId).get();
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            return {
+              id: friendId,
+              name: userData?.name || 'Unknown',
+              email: userData?.email || '',
+              avatar: userData?.avatar || null,
+              isFriend: true
+            };
+          }
+          return null;
+        })
+      );
+      setFriendsList(friendsData.filter(Boolean));
+    } catch (error) {
+      console.error('Error loading friends:', error);
+    }
+  };
 
   // ✅ Check if current user has seen message
   const hasUserSeen = (messageSeenBy: Record<string, boolean> | undefined): boolean => {
@@ -121,13 +155,28 @@ const ChatContainer = () => {
     }
   };
 
-  // ✅ Filter chats by search
-  const filteredList = list.filter(
+  // ✅ Combine chats and friends, then filter by search
+  const existingChatIds = new Set(list.map(chat => chat.id));
+  const friendsNotInChats = friendsList.filter(friend => !existingChatIds.has(friend.id));
+  
+  const combinedList = [
+    ...list, // Existing chats with messages
+    ...friendsNotInChats.map(friend => ({
+      ...friend,
+      roomId: generateRoomId(myId!, friend.id),
+      lastMessage: null,
+      unseenCount: 0,
+      isNewChat: true
+    }))
+  ];
+
+  const filteredList = combinedList.filter(
     item =>
       item.name?.toLowerCase().includes(search.toLowerCase()) ||
       item.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+   console.log(filteredList, ":rfa")
   // ✅ Render single chat row
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
@@ -144,7 +193,20 @@ const ChatContainer = () => {
             if (item.unseenCount > 0) {
               dispatch(markChatAsRead(item.id));
             }
-            nav.navigate('ChatRoom', { friendId: item.id, friendName: item.name });
+            if (item.isGroup) {
+              nav.navigate('ChatRoom', { 
+                roomId: item.roomId, 
+                friendName: item.name,
+                isGroup: true,
+                groupName: item.groupName 
+              });
+            } else {
+              nav.navigate('ChatRoom', { 
+                friendId: item.id, 
+                friendName: item.name,
+                roomId: item.roomId || generateRoomId(myId!, item.id)
+              });
+            }
           }}
         >
           <CustomAvatar name={item.name} />
@@ -206,6 +268,26 @@ const ChatContainer = () => {
     [nav, colors, dispatch, t, myId]
   );
 
+  // Handle group creation
+  const handleCreateGroup = useCallback(async (selectedFriends: any[]) => {
+    if (!myId || selectedFriends.length === 0) return;
+    
+    try {
+      const participantIds = [myId, ...selectedFriends.map(friend => friend.id)];
+      const roomId = await createGroupChatRoom(participantIds, 'Group', myId);
+      
+      // Navigate to the new group chat
+      nav.navigate('ChatRoom', {
+        roomId,
+        isGroup: true,
+        groupName: 'Group'
+      });
+      
+    } catch (error: any) {
+      console.error('Error creating group:', error);
+    }
+  }, [myId, nav]);
+
   // ✅ Render states
   if (initializing || loading) {
     return (
@@ -261,6 +343,24 @@ const ChatContainer = () => {
         keyExtractor={i => i.id}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+      />
+      
+      {/* Create Group FAB */}
+      <TouchableOpacity
+        style={[styles.createGroupFab, { backgroundColor: colors.primary }]}
+        onPress={() => setCreateGroupBottomSheetVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Icon name="people" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Group Creation Bottom Sheet */}
+      <FriendSelectionBottomSheet
+        visible={createGroupBottomSheetVisible}
+        onClose={() => setCreateGroupBottomSheetVisible(false)}
+        messageToForward={null}
+        forwarded={false}
+        onForwardComplete={handleCreateGroup}
       />
     </View>
   );

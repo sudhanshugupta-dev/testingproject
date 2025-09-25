@@ -117,6 +117,10 @@ export type Chat = {
     isSeen: boolean;
   } | null;
   unseenCount: number;
+  isGroup?: boolean;
+  groupName?: string;
+  participants?: string[];
+  isNewChat?: boolean;
 };
 
 type ChatsState = {
@@ -202,7 +206,9 @@ const chatsSlice = createSlice({
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
+    
   },
+ 
 });
 
 export const {
@@ -229,6 +235,7 @@ export const startChatListListener = () => (dispatch: AppDispatch) => {
     unsubscribeChatList?.(); // clear previous listener
     unsubscribeChatList = listenToChatList(chatList => {
       dispatch(setChats(chatList));
+
       dispatch(setLoading(false));
     });
   } catch (err: any) {

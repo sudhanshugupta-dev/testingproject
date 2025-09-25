@@ -200,6 +200,27 @@ export const createStyles = (mode: 'light' | 'dark') => {
       borderRadius: 12,
       padding: 2,
     },
+    addMembersButton: {
+      position: 'absolute',
+      bottom: 80,
+      right: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      zIndex: 1000,
+    },
+    memberCount: {
+      fontSize: 12,
+      opacity: 0.7,
+    },
   });
 };
 
