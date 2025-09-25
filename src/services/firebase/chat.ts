@@ -673,7 +673,27 @@ export const sendMessage = async (
       .where("roomId", "==", roomId)
       .get();
 
+    // For group chats, check if members are still active
+    let activeMembers = null;
+    if (message.isGroup) {
+      const roomDoc = await firestore().collection("rooms").doc(roomId).get();
+      if (roomDoc.exists()) {
+        const roomData = roomDoc.data();
+        activeMembers = roomData?.members || {};
+      }
+    }
+
     chatDocs.forEach((doc) => {
+      const chatData = doc.data();
+      const userId = doc.id.split('_')[0]; // Extract user ID from chat document ID
+      
+      // For group chats, only update if user is still an active member
+      if (message.isGroup && activeMembers) {
+        if (!activeMembers[userId] || !activeMembers[userId].isActive) {
+          return; // Skip inactive members
+        }
+      }
+
       batch.update(doc.ref, {
         lastMessage: lastMessagePreview,
         lastMessageAt: serverTimestamp,
@@ -1224,9 +1244,19 @@ export const createGroupChatRoom = async (
       return roomId;
     }
     
-    // Create new group room
+    // Create new group room with member tracking
+    const membersObject = participantIds.reduce((acc, userId) => {
+      acc[userId] = {
+        isActive: true,
+        joinedAt: firestore.FieldValue.serverTimestamp(),
+        role: userId === creatorId ? 'admin' : 'member'
+      };
+      return acc;
+    }, {} as Record<string, any>);
+
     await roomRef.set({
       participants: participantIds,
+      members: membersObject, // Track each member's status
       groupName,
       isGroup: true,
       createdAt: firestore.FieldValue.serverTimestamp(),
@@ -1489,5 +1519,134 @@ export const createMockMessages = async (roomId: string, userId1: string, userId
     console.log('Mock messages created successfully for room:', roomId);
   } catch (error: any) {
     console.error('Error creating mock messages:', error);
+  }
+};
+
+// Remove user from group
+export const removeUserFromGroup = async (
+  roomId: string,
+  userIdToRemove: string,
+  adminId: string
+): Promise<void> => {
+  try {
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const roomDoc = await roomRef.get();
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Group not found');
+    }
+    
+    const roomData = roomDoc.data();
+    
+    // Check if admin has permission
+    if (!roomData?.admins?.includes(adminId)) {
+      throw new Error('Only admins can remove members');
+    }
+    
+    // Update member status to inactive
+    await roomRef.update({
+      [`members.${userIdToRemove}.isActive`]: false,
+      [`members.${userIdToRemove}.removedAt`]: firestore.FieldValue.serverTimestamp(),
+      [`members.${userIdToRemove}.removedBy`]: adminId
+    });
+    
+    // Remove from participants array
+    const updatedParticipants = roomData.participants.filter((id: string) => id !== userIdToRemove);
+    await roomRef.update({
+      participants: updatedParticipants
+    });
+    
+    // Update user's chat entry to mark as removed
+    const userChatRef = firestore().collection('chats').doc(`${userIdToRemove}_${roomId}`);
+    await userChatRef.update({
+      isActive: false,
+      removedAt: firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`User ${userIdToRemove} removed from group ${roomId}`);
+  } catch (error: any) {
+    console.error('Error removing user from group:', error);
+    throw error;
+  }
+};
+
+// Add user back to group
+export const addUserToGroup = async (
+  roomId: string,
+  userIdToAdd: string,
+  adminId: string
+): Promise<void> => {
+  try {
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const roomDoc = await roomRef.get();
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Group not found');
+    }
+    
+    const roomData = roomDoc.data();
+    
+    // Check if admin has permission
+    if (!roomData?.admins?.includes(adminId)) {
+      throw new Error('Only admins can add members');
+    }
+    
+    // Add/reactivate member
+    await roomRef.update({
+      [`members.${userIdToAdd}`]: {
+        isActive: true,
+        joinedAt: firestore.FieldValue.serverTimestamp(),
+        role: 'member',
+        addedBy: adminId
+      }
+    });
+    
+    // Add to participants array if not already there
+    if (!roomData.participants.includes(userIdToAdd)) {
+      await roomRef.update({
+        participants: firestore.FieldValue.arrayUnion(userIdToAdd)
+      });
+    }
+    
+    // Create/reactivate user's chat entry
+    const userChatRef = firestore().collection('chats').doc(`${userIdToAdd}_${roomId}`);
+    await userChatRef.set({
+      roomId,
+      participants: [...roomData.participants, userIdToAdd],
+      isGroup: true,
+      groupName: roomData.groupName,
+      lastMessage: roomData.lastMessage || '',
+      lastMessageAt: roomData.lastMessageAt,
+      name: roomData.groupName,
+      avatar: null,
+      unreadCount: 0,
+      isActive: true,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    
+    console.log(`User ${userIdToAdd} added to group ${roomId}`);
+  } catch (error: any) {
+    console.error('Error adding user to group:', error);
+    throw error;
+  }
+};
+
+// Get active group members
+export const getActiveGroupMembers = async (roomId: string): Promise<string[]> => {
+  try {
+    const roomDoc = await firestore().collection('rooms').doc(roomId).get();
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Group not found');
+    }
+    
+    const roomData = roomDoc.data();
+    const members = roomData?.members || {};
+    
+    // Return only active member IDs
+    return Object.keys(members).filter(userId => members[userId].isActive);
+  } catch (error: any) {
+    console.error('Error getting active group members:', error);
+    throw error;
   }
 };
