@@ -80,7 +80,7 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [myId, visible, mode, excludeUserIds]);
+  }, [myId, visible, mode]);
 
   useEffect(() => {
     if (visible) {

@@ -1244,6 +1244,7 @@ export const getFriendsList = async (userId: string): Promise<any[]> => {
   }
 };
 
+
 // Generate group room ID from multiple user IDs
 export const generateGroupRoomId = (userIds: string[]): string => {
   // Sort user IDs to ensure consistent room ID generation
