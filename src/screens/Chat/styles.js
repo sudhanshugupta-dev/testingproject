@@ -73,6 +73,23 @@ export const createStyles = (mode = 'light') => {
       fontSize: 12,
       fontWeight: '400',
     },
+    createGroupFab: {
+      position: 'absolute',
+      bottom: 120,
+      right: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      zIndex: 1000,
+    },
   });
 };
 
