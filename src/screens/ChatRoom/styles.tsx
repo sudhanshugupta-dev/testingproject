@@ -221,6 +221,24 @@ export const createStyles = (mode: 'light' | 'dark') => {
       fontSize: 12,
       opacity: 0.7,
     },
+    headerContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    senderInfo: {
+      marginBottom: 4,
+      marginLeft: 8,
+    },
+    senderContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    senderName: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 6,
+    },
   });
 };
 

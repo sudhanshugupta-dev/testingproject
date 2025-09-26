@@ -635,7 +635,39 @@ export const sendMessage = async (
       else lastMessagePreview = "📎 File";
     }
 
+    // Get sender name for group messages
+    let senderName = '';
+    if (message.isGroup) {
+      try {
+        const senderProfile = await getUserProfile(userId);
+        senderName = senderProfile?.displayName || senderProfile?.name || senderProfile?.email?.split('@')[0] || 'User';
+      } catch (error) {
+        console.log('Could not fetch sender profile for message:', userId);
+        senderName = 'User';
+      }
+    }
+
+    // Build seenBy object based on chat type
+    let seenByObj: Record<string, boolean> = {};
+    if (message.isGroup) {
+      // For group chats, get all participants and set seenBy for each
+      const roomDoc = await firestore().collection('rooms').doc(roomId).get();
+      const roomData = roomDoc.data();
+      const participants = roomData?.participants || [];
+      
+      participants.forEach((participantId: string) => {
+        seenByObj[participantId] = participantId === userId; // Only sender has seen it initially
+      });
+    } else {
+      // For 1-on-1 chats
+      seenByObj = {
+        [userId]: true, // sender auto sees own
+        ...(receiverId && { [receiverId]: false }), // receiver starts unseen
+      };
+    }
+
     const messageData: Message = {
+      id: messageRef.id,
       text: messageType === 'gif' ? '' : message.text, // Don't save text for GIF messages
       senderId: userId,
       ...(receiverId && { receiverId }), // Only include receiverId if it exists
@@ -644,10 +676,8 @@ export const sendMessage = async (
       status: "sent",
       isSeen: false,
       media: message.media || [],
-      seenBy: {
-        [userId]: true, // sender auto sees own
-        ...(receiverId && { [receiverId]: false }), // receiver starts unseen (only for 1-on-1 chats)
-      },
+      ...(message.isGroup && { senderName }), // Add sender name for group messages
+      seenBy: seenByObj,
     };
 
     console.log("Final messageData being sent to Firebase:", JSON.stringify(messageData, null, 2));
@@ -757,6 +787,7 @@ export const listenToMessages = (
               deletedAt: data.deletedAt,
               deletedBy: data.deletedBy,
               forwardedFrom: data.forwardedFrom,
+              senderName: data.senderName || '', // Get sender name from stored data
             };
           });
           
@@ -1359,26 +1390,69 @@ export const addMembersToGroup = async (
 
     const currentParticipants = roomData.participants || [];
     const groupName = roomData.groupName || 'Group';
+    const currentMembers = roomData.members || {};
     
-    // Filter out members who are already in the group
-    const membersToAdd = newMemberIds.filter(id => !currentParticipants.includes(id));
+    // Separate members into new and existing (inactive) members
+    const newMembers: string[] = [];
+    const reactivatingMembers: string[] = [];
     
-    if (membersToAdd.length === 0) {
-      console.log('All selected members are already in the group');
+    newMemberIds.forEach(memberId => {
+      // Skip if already active in participants
+      if (currentParticipants.includes(memberId)) {
+        return;
+      }
+      
+      // Check if member exists in members object
+      if (currentMembers[memberId]) {
+        // Member exists but is inactive, reactivate them
+        reactivatingMembers.push(memberId);
+      } else {
+        // Completely new member
+        newMembers.push(memberId);
+      }
+    });
+    
+    const allMembersToAdd = [...newMembers, ...reactivatingMembers];
+    
+    if (allMembersToAdd.length === 0) {
+      console.log('All selected members are already active in the group');
       return;
     }
 
-    const updatedParticipants = [...currentParticipants, ...membersToAdd];
+    const updatedParticipants = [...currentParticipants, ...allMembersToAdd];
+    const updatedMembers = { ...currentMembers };
     
-    // Update room with new participants
+    // Handle new members
+    newMembers.forEach(memberId => {
+      updatedMembers[memberId] = {
+        isActive: true,
+        addedAt: firestore.FieldValue.serverTimestamp(),
+        addedBy: addedBy
+      };
+    });
+    
+    // Handle reactivating existing members
+    reactivatingMembers.forEach(memberId => {
+      updatedMembers[memberId] = {
+        ...updatedMembers[memberId],
+        isActive: true,
+        reactivatedAt: firestore.FieldValue.serverTimestamp(),
+        reactivatedBy: addedBy
+      };
+    });
+    
+    // Update room with new participants and members
     await roomRef.update({
       participants: updatedParticipants,
-      lastMessage: `${membersToAdd.length} member(s) added to the group`,
+      members: updatedMembers,
+      lastMessage: `${allMembersToAdd.length} member(s) added to the group`,
       lastMessageAt: firestore.FieldValue.serverTimestamp(),
     });
 
-    // Create chat entries for new members
-    await createGroupChatEntries(roomId, membersToAdd, groupName);
+    // Create chat entries for new members only (not reactivating members)
+    if (newMembers.length > 0) {
+      await createGroupChatEntries(roomId, newMembers, groupName);
+    }
     
     // Update existing chat entries with new participant list
     const existingChatDocs = await firestore()
@@ -1390,13 +1464,13 @@ export const addMembersToGroup = async (
     existingChatDocs.forEach(doc => {
       batch.update(doc.ref, {
         participants: updatedParticipants,
-        lastMessage: `${membersToAdd.length} member(s) added to the group`,
+        lastMessage: `${allMembersToAdd.length} member(s) added to the group`,
         lastMessageAt: firestore.FieldValue.serverTimestamp(),
       });
     });
 
     await batch.commit();
-    console.log(`Successfully added ${membersToAdd.length} members to group:`, roomId);
+    console.log(`Successfully added ${allMembersToAdd.length} members to group (${newMembers.length} new, ${reactivatingMembers.length} reactivated):`, roomId);
   } catch (error: any) {
     console.error('Error adding members to group:', error);
     throw error;
@@ -1409,39 +1483,37 @@ export const getGroupDetails = async (roomId: string): Promise<any> => {
     const roomRef = firestore().collection('rooms').doc(roomId);
     const roomDoc = await roomRef.get();
     
+    console.log('🔍 Getting group details for roomId:', roomId);
+    
     if (!roomDoc.exists()) {
+      console.error('❌ Room document does not exist:', roomId);
       throw new Error('Group not found');
     }
 
     const roomData = roomDoc.data();
+    console.log('📄 Room data:', roomData);
+    
     if (!roomData?.isGroup) {
+      console.error('❌ Not a group chat:', roomData);
       throw new Error('This is not a group chat');
     }
 
-    // Get participant details
-    const participantIds = roomData.participants || [];
-    const participantDocs = await Promise.all(
-      participantIds.map((id: string) => firestore().collection('users').doc(id).get())
-    );
-    
-    const participants = participantDocs.map(doc => ({
-      id: doc.id,
-      name: doc.data()?.name || doc.data()?.email || 'Unknown',
-      email: doc.data()?.email || '',
-      avatar: doc.data()?.avatar || null
-    }));
-
-    return {
+    // Return the raw room data with participant IDs (not user objects)
+    const result = {
       roomId,
-      groupName: roomData.groupName,
-      participants,
+      groupName: roomData.groupName || 'Group',
+      participants: roomData.participants || [], // Keep as array of IDs
       admins: roomData.admins || [],
+      members: roomData.members || {}, // Include members object
       createdBy: roomData.createdBy,
       createdAt: roomData.createdAt,
       isGroup: true
     };
+    
+    console.log('✅ Group details result:', result);
+    return result;
   } catch (error: any) {
-    console.error('Error getting group details:', error);
+    console.error('❌ Error getting group details:', error);
     throw error;
   }
 };
@@ -1522,53 +1594,6 @@ export const createMockMessages = async (roomId: string, userId1: string, userId
   }
 };
 
-// Remove user from group
-export const removeUserFromGroup = async (
-  roomId: string,
-  userIdToRemove: string,
-  adminId: string
-): Promise<void> => {
-  try {
-    const roomRef = firestore().collection('rooms').doc(roomId);
-    const roomDoc = await roomRef.get();
-    
-    if (!roomDoc.exists()) {
-      throw new Error('Group not found');
-    }
-    
-    const roomData = roomDoc.data();
-    
-    // Check if admin has permission
-    if (!roomData?.admins?.includes(adminId)) {
-      throw new Error('Only admins can remove members');
-    }
-    
-    // Update member status to inactive
-    await roomRef.update({
-      [`members.${userIdToRemove}.isActive`]: false,
-      [`members.${userIdToRemove}.removedAt`]: firestore.FieldValue.serverTimestamp(),
-      [`members.${userIdToRemove}.removedBy`]: adminId
-    });
-    
-    // Remove from participants array
-    const updatedParticipants = roomData.participants.filter((id: string) => id !== userIdToRemove);
-    await roomRef.update({
-      participants: updatedParticipants
-    });
-    
-    // Update user's chat entry to mark as removed
-    const userChatRef = firestore().collection('chats').doc(`${userIdToRemove}_${roomId}`);
-    await userChatRef.update({
-      isActive: false,
-      removedAt: firestore.FieldValue.serverTimestamp()
-    });
-    
-    console.log(`User ${userIdToRemove} removed from group ${roomId}`);
-  } catch (error: any) {
-    console.error('Error removing user from group:', error);
-    throw error;
-  }
-};
 
 // Add user back to group
 export const addUserToGroup = async (
@@ -1650,3 +1675,124 @@ export const getActiveGroupMembers = async (roomId: string): Promise<string[]> =
     throw error;
   }
 };
+
+// Update group name
+export const updateGroupName = async (roomId: string, newName: string) => {
+  try {
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    await roomRef.update({
+      groupName: newName,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Update all chat entries for this group
+    const chatsQuery = await firestore()
+      .collection('chats')
+      .where('roomId', '==', roomId)
+      .get();
+
+    const batch = firestore().batch();
+    chatsQuery.docs.forEach(doc => {
+      batch.update(doc.ref, {
+        groupName: newName,
+        name: newName,
+      });
+    });
+
+    await batch.commit();
+    console.log(`Group name updated to: ${newName}`);
+  } catch (error: any) {
+    console.error('Error updating group name:', error);
+    throw error;
+  }
+};
+
+// Remove user from group
+export const removeUserFromGroup = async (roomId: string, userIdToRemove: string, adminId: string) => {
+  try {
+    console.log('🚫 Removing user from group:', { roomId, userIdToRemove, adminId });
+    
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    const roomDoc = await roomRef.get();
+    
+    if (!roomDoc.exists()) {
+      throw new Error('Group not found');
+    }
+    
+    const roomData = roomDoc.data();
+    
+    // Check if admin has permission
+    if (!roomData?.admins?.includes(adminId)) {
+      throw new Error('Only admins can remove members');
+    }
+    
+    // Update member status to inactive and remove from participants
+    await roomRef.update({
+      [`members.${userIdToRemove}.isActive`]: false,
+      [`members.${userIdToRemove}.removedAt`]: firestore.FieldValue.serverTimestamp(),
+      [`members.${userIdToRemove}.removedBy`]: adminId,
+      participants: firestore.FieldValue.arrayRemove(userIdToRemove),
+    });
+
+    // Mark user's chat entry as inactive
+    const userChatRef = firestore().collection('chats').doc(`${userIdToRemove}_${roomId}`);
+    await userChatRef.update({
+      isActive: false,
+      removedAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log('✅ User removed from group successfully:', userIdToRemove);
+  } catch (error: any) {
+    console.error('❌ Error removing user from group:', error);
+    throw error;
+  }
+};
+
+// Leave group
+export const leaveGroup = async (roomId: string, userId: string) => {
+  try {
+    console.log('🚪 User leaving group:', { roomId, userId });
+    
+    const roomRef = firestore().collection('rooms').doc(roomId);
+    
+    // Update member status to inactive and remove from participants
+    await roomRef.update({
+      [`members.${userId}.isActive`]: false,
+      [`members.${userId}.leftAt`]: firestore.FieldValue.serverTimestamp(),
+      participants: firestore.FieldValue.arrayRemove(userId),
+    });
+
+    // Mark user's chat entry as inactive
+    const userChatRef = firestore().collection('chats').doc(`${userId}_${roomId}`);
+    await userChatRef.update({
+      isActive: false,
+      leftAt: firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log('✅ User left group successfully:', userId);
+  } catch (error: any) {
+    console.error('❌ Error leaving group:', error);
+    throw error;
+  }
+};
+
+// Get user profile
+export const getUserProfile = async (userId: string) => {
+  try {
+    console.log('👤 Getting user profile for:', userId);
+    const userDoc = await firestore().collection('users').doc(userId).get();
+    
+    if (!userDoc.exists()) {
+      console.error('❌ User document does not exist:', userId);
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data();
+    console.log('✅ User profile data:', userData);
+    return userData;
+  } catch (error: any) {
+    console.error('❌ Error getting user profile for', userId, ':', error);
+    throw error;
+  }
+};
+

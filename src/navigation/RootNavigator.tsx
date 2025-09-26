@@ -8,6 +8,7 @@ import VerifyOTPScreen from '../screens/VerifyOTP';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import MainTabs from './Tabs';
 import ChatRoom from '../screens/ChatRoom';
+import GroupDetails from '../screens/GroupDetails';
 import ProfileScreen from '../screens/Profile'
 
 export type RootStackParamList = {
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Main: undefined;
   UserProfile: undefined;
   ChatRoom: { friendId: string; friendName?: string };
+  GroupDetails: { roomId: string; groupName?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,6 +41,7 @@ const RootNavigator = () => {
         <>
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="ChatRoom" component={ChatRoom} />
+          <Stack.Screen name="GroupDetails" component={GroupDetails} />
         </>
       ) : (
         <>

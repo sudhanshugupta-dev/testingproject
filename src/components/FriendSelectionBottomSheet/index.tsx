@@ -28,19 +28,27 @@ interface Friend {
 interface FriendSelectionBottomSheetProps {
   visible: boolean;
   onClose: () => void;
-  messageToForward: Message | null;
-  forwarded: boolean;
+  messageToForward?: Message | null;
+  forwarded?: boolean;
   mediaToForward?: Array<{uri: string; type: string; fileName?: string}>;
   onForwardComplete?: (selectedFriends: Friend[]) => void;
+  mode?: 'forward' | 'addMembers';
+  excludeUserIds?: string[];
+  title?: string;
+  onSelectFriends?: (selectedFriends: Friend[]) => void;
 }
 
 const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
   visible,
   onClose,
-  messageToForward,
-  forwarded,
+  messageToForward = null,
+  forwarded = false,
   mediaToForward = [],
   onForwardComplete,
+  mode = 'forward',
+  excludeUserIds = [],
+  title,
+  onSelectFriends,
 }) => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
@@ -60,13 +68,19 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
     try {
       const friendsList = await getFriendsList(myId);
       console.log('check it correct', friendsList);
-      setFriends(friendsList);
+      
+      // Filter out users already in group if mode is addMembers
+      const filteredFriends = mode === 'addMembers' 
+        ? friendsList.filter(friend => !excludeUserIds.includes(friend.id))
+        : friendsList;
+      
+      setFriends(filteredFriends);
     } catch (error: any) {
       Alert.alert('Error', `Failed to load friends: ${error.message}`);
     } finally {
       setLoading(false);
     }
-  }, [myId, visible]);
+  }, [myId, visible, mode, excludeUserIds]);
 
   useEffect(() => {
     if (visible) {
@@ -129,6 +143,11 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
         };
         
         await forwardMessage(message, friendIds, myId, false);
+      } else if (mode === 'addMembers') {
+        // Adding members to group - use onSelectFriends callback
+        onSelectFriends?.(selectedFriendsList);
+        onClose();
+        return;
       } else if (!forwarded) {
         // Adding members to group - just return selected friends
         onForwardComplete?.(selectedFriendsList);
@@ -203,7 +222,7 @@ const FriendSelectionBottomSheet: React.FC<FriendSelectionBottomSheetProps> = ({
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.text + '20' }]}>
             <Text style={[styles.title, { color: colors.text }]}>
-              {forwarded ? 'Forward Message' : 'Add Members'}
+              {title || (mode === 'addMembers' ? 'Add Members' : (forwarded ? 'Forward Message' : 'Add Members'))}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Icon name="close" size={24} color={colors.text} />

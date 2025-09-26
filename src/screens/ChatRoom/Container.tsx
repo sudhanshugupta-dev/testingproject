@@ -745,6 +745,7 @@ const ChatRoomContainer = () => {
   // Render messages
   const renderMessage = useCallback(
     ({ item }: { item: any }) => {
+      console.log("items ", item)
       if (item.type === "separator") {
         return (
           <View style={styles.separatorContainer}>
@@ -760,40 +761,64 @@ const ChatRoomContainer = () => {
       let rowRef: Swipeable | null = null;
 
       return (
-        <Swipeable
-          ref={(ref) => { rowRef = ref; }}
-          friction={1.5}
-          leftThreshold={ACTION_WIDTH * 0.5}
-          overshootLeft={false}
-          overshootFriction={1}
-          renderLeftActions={(progress) => <LeftAction progress={progress} styles={styles} />}
-          onSwipeableWillOpen={() => {
-            if (openRowRef.current && openRowRef.current !== rowRef) {
-              openRowRef.current.close();
-            }
-            openRowRef.current = rowRef;
-            setReplyingTo(item);
-            setTimeout(() => rowRef?.close(), 300);
-          }}
-          onSwipeableClose={() => {
-            if (openRowRef.current === rowRef) openRowRef.current = null;
-          }}
-          containerStyle={styles.swipeableContainer}
-        >
-          <ChatBubble
-            text={item.text}
-            media={item.media}
-            isMine={item.senderId === myId}
-            timestamp={item.createdAt}
-            messageType={item.messageType}
-            replyTo={item.replyTo}
-            onLongPress={() => handleLongPress(item)}
-            currentUserId={myId}
-            isUploading={item.isUploading}
-            uploadProgress={item.uploadProgress}
-            uploadError={item.uploadError}
-          />
-        </Swipeable>
+        <View>
+          {/* Show sender info for group messages (only for messages from others) */}
+          {isGroup && item.senderId !== myId && (
+            <View style={styles.senderInfo}>
+              <TouchableOpacity 
+                style={styles.senderContainer}
+                onPress={() => {
+                  // Navigate to one-to-one chat with sender
+                  nav.navigate('ChatRoom', {
+                    friendId: item.senderId,
+                    friendName: item.senderName || 'User',
+                    isGroup: false,
+                  });
+                }}
+              >
+                <CustomAvatar name={item.senderName || 'User'} size={24} />
+                <Text style={[styles.senderName, { color: colors.primary }]}>
+                  {item.senderName || 'User'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          <Swipeable
+            ref={(ref) => { rowRef = ref; }}
+            friction={1.5}
+            leftThreshold={ACTION_WIDTH * 0.5}
+            overshootLeft={false}
+            overshootFriction={1}
+            renderLeftActions={(progress) => <LeftAction progress={progress} styles={styles} />}
+            onSwipeableWillOpen={() => {
+              if (openRowRef.current && openRowRef.current !== rowRef) {
+                openRowRef.current.close();
+              }
+              openRowRef.current = rowRef;
+              setReplyingTo(item);
+              setTimeout(() => rowRef?.close(), 300);
+            }}
+            onSwipeableClose={() => {
+              if (openRowRef.current === rowRef) openRowRef.current = null;
+            }}
+            containerStyle={styles.swipeableContainer}
+          >
+            <ChatBubble
+              text={item.text}
+              media={item.media}
+              isMine={item.senderId === myId}
+              timestamp={item.createdAt}
+              messageType={item.messageType}
+              replyTo={item.replyTo}
+              onLongPress={() => handleLongPress(item)}
+              currentUserId={myId}
+              isUploading={item.isUploading}
+              uploadProgress={item.uploadProgress}
+              uploadError={item.uploadError}
+            />
+          </Swipeable>
+        </View>
       );
     },
     [myId, colors, handleLongPress]
@@ -844,17 +869,30 @@ const ChatRoomContainer = () => {
           <TouchableOpacity onPress={() => nav.goBack()}>
             <Icon name="arrow-back" size={30} color={colors.primary} />
           </TouchableOpacity>
-          <CustomAvatar name={friendName || groupName || "Unknown"} size={40} />
-          <View style={styles.headerTextContainer}>
-            <Text style={[styles.friendName, { color: colors.text }]}>
-              {isGroup ? (groupName || "Group") : (friendName || t("chat.friend"))}
-            </Text>
-            {isGroup && groupDetails && (
-              <Text style={[styles.memberCount, { color: colors.text, opacity: 0.7, fontSize: 12 }]}>
-                {groupDetails.participants.length} members
+          <TouchableOpacity 
+            style={styles.headerContent}
+            onPress={() => {
+              if (isGroup && roomId) {
+                nav.navigate('GroupDetails', { 
+                  roomId, 
+                  groupName: groupName || "Group" 
+                });
+              }
+            }}
+            disabled={!isGroup}
+          >
+            <CustomAvatar name={friendName || groupName || "Unknown"} size={40} />
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.friendName, { color: colors.text }]}>
+                {isGroup ? (groupName || "Group") : (friendName || t("chat.friend"))}
               </Text>
-            )}
-          </View>
+              {isGroup && groupDetails && (
+                <Text style={[styles.memberCount, { color: colors.text, opacity: 0.7, fontSize: 12 }]}>
+                  {groupDetails.participants.length} members
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -949,16 +987,6 @@ const ChatRoomContainer = () => {
               </ScrollView>
             )}
 
-            {/* Group Add Members Button - Positioned above input */}
-            {isGroup && (
-              <TouchableOpacity
-                style={[styles.addMembersButton, { backgroundColor: colors.primary }]}
-                onPress={() => setAddMembersBottomSheetVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Icon name="add" size={24} color="#fff" />
-              </TouchableOpacity>
-            )}
 
             {/* Input Row - Fixed position */}
             <KeyboardAvoidingView 

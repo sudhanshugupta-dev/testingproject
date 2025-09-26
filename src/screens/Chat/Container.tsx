@@ -130,10 +130,20 @@ const ChatContainer = () => {
     }
   };
 
-  // ✅ Check if current user has seen message
-  const hasUserSeen = (messageSeenBy: Record<string, boolean> | undefined): boolean => {
-    if (!messageSeenBy || !myId) return true;
-    return messageSeenBy[myId] === true;
+  // ✅ Check if current user has seen the last message
+  const hasUserSeen = (lastMessage: any): boolean => {
+    if (!lastMessage || !myId) return true;
+    
+    // If the current user sent the message, they've "seen" it
+    if (lastMessage.senderId === myId) return true;
+    
+    // Check seenBy field for the current user
+    if (lastMessage.seenBy && typeof lastMessage.seenBy === 'object') {
+      return lastMessage.seenBy[myId] === true;
+    }
+    
+    // Fallback to isSeen field
+    return lastMessage.isSeen === true;
   };
 
   // ✅ Format last message
@@ -180,7 +190,8 @@ const ChatContainer = () => {
   // ✅ Render single chat row
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
-      const seen = hasUserSeen(item.lastMessage?.seenBy);
+      const seen = hasUserSeen(item.lastMessage);
+      const hasUnreadMessages = item.unseenCount > 0;
 
       return (
         <Pressable
@@ -190,9 +201,11 @@ const ChatContainer = () => {
           ]}
           android_ripple={{ color: colors.primary + '20' }}
           onPress={() => {
-            if (item.unseenCount > 0) {
-              dispatch(markChatAsRead(item.id));
+            // Mark chat as read when opening
+            if (hasUnreadMessages) {
+              dispatch(markChatAsRead(item.isGroup ? item.roomId : item.id));
             }
+            
             if (item.isGroup) {
               nav.navigate('ChatRoom', { 
                 roomId: item.roomId, 
@@ -216,7 +229,7 @@ const ChatContainer = () => {
               style={[
                 styles.name,
                 { color: colors.text },
-                !seen && { fontWeight: 'bold', fontSize: 19 },
+                (!seen || hasUnreadMessages) && { fontWeight: 'bold', fontSize: 19 },
               ]}
             >
               {item.name}
@@ -237,7 +250,7 @@ const ChatContainer = () => {
                   style={[
                     styles.last,
                     { color: colors.text, opacity: 0.6, flex: 1 },
-                    !seen && { fontWeight: 'bold', opacity: 0.9, fontSize: 16 },
+                    (!seen || hasUnreadMessages) && { fontWeight: 'bold', opacity: 0.9, fontSize: 16 },
                   ]}
                 >
                   {formatLastMessage(item.lastMessage).text}
@@ -255,7 +268,7 @@ const ChatContainer = () => {
             </View>
           </View>
 
-          {item.unseenCount > 0 && (
+          {hasUnreadMessages && (
             <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.unreadText}>
                 {item.unseenCount > 99 ? '99+' : item.unseenCount}
