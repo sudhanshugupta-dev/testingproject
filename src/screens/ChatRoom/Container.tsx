@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
+  Button,
   Alert,
   ScrollView,
   Keyboard,
@@ -781,6 +782,8 @@ const ChatRoomContainer = () => {
                   {item.senderName || 'User'}
                 </Text>
               </TouchableOpacity>
+
+              <Button title="Button" onPress={() => {() => nav.navigate('HomeScreen')}} />
             </View>
           )}
           
@@ -893,6 +896,41 @@ const ChatRoomContainer = () => {
               )}
             </View>
           </TouchableOpacity>
+          
+          {/* Call buttons - only show for individual chats */}
+          {!isGroup && friendId && (
+            <View style={styles.callButtons}>
+              <TouchableOpacity
+                style={[styles.callButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  // Start video call
+                  const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                  nav.navigate('VideoCall', {
+                    callId,
+                    targetUserId: friendId,
+                    isVideo: true
+                  });
+                }}
+              >
+                <Icon name="videocam" size={20} color="white" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.callButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  // Start audio call
+                  const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                  nav.navigate('VideoCall', {
+                    callId,
+                    targetUserId: friendId,
+                    isVideo: false
+                  });
+                }}
+              >
+                <Icon name="call" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Content */}

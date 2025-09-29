@@ -10,6 +10,10 @@ import MainTabs from './Tabs';
 import ChatRoom from '../screens/ChatRoom';
 import GroupDetails from '../screens/GroupDetails';
 import ProfileScreen from '../screens/Profile'
+import VideoCallScreen from '../screens/VideoCallScreen';
+import HomeScreen from '../screens/HomeScreen';
+import IncomingCallScreen from '../screens/IncomingCallScreen';
+import OutgoingCallScreen from '../screens/OutgoingCallScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -20,8 +24,12 @@ export type RootStackParamList = {
   ResetPassword: { email?: string } | undefined;
   Main: undefined;
   UserProfile: undefined;
-  ChatRoom: { friendId: string; friendName?: string };
+  ChatRoom: { friendId: string; friendName?: string; roomId?: string; isGroup?: boolean; groupName?: string };
   GroupDetails: { roomId: string; groupName?: string };
+  HomeScreen: undefined;
+  VideoCall: { callId: string; targetUserId: string; isVideo: boolean };
+  Incoming: undefined;
+  OutgoingAudio: { isVideo: boolean };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,6 +50,10 @@ const RootNavigator = () => {
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="ChatRoom" component={ChatRoom} />
           <Stack.Screen name="GroupDetails" component={GroupDetails} />
+           <Stack.Screen name="HomeScreen" component={HomeScreen} />
+          <Stack.Screen name="OutgoingAudio" component={OutgoingCallScreen} initialParams={{ isVideo: false }} />
+          <Stack.Screen name="Incoming" component={IncomingCallScreen} />
+          <Stack.Screen name="VideoCall" component={VideoCallScreen} />
         </>
       ) : (
         <>

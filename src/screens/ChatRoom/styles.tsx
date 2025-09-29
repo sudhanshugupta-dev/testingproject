@@ -239,6 +239,23 @@ export const createStyles = (mode: 'light' | 'dark') => {
       fontWeight: '600',
       marginLeft: 6,
     },
+    callButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    callButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 2,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+    },
   });
 };
 

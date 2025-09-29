@@ -22,6 +22,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openCamera, openGallery } from './src/utils/cameraUtils';
 import FriendSelectionBottomSheet from './src/components/FriendSelectionBottomSheet';
 import LottieView from 'lottie-react-native';
+import {StreamProvider} from './src/contexts/StreamProvider';
+import ErrorBoundary from './src/components/ErrorBoundary';
 /* ------------------------------------------------
  * Quick Action Handler
  * ------------------------------------------------ */
@@ -105,8 +107,11 @@ const QuickActionHandler = ({
       try {
         navigation.dispatch(
           CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'ChatRoom', params: pendingChat }],
+            index: 1,
+            routes: [
+              { name: 'Main' },
+              { name: 'ChatRoom', params: pendingChat }
+            ],
           })
         );
       } catch (err) {
@@ -138,6 +143,13 @@ const QuickActionHandler = ({
   return null;
 };
 
+// useEffect(() => {
+//   const unsubscribe = client?.on('call.ring', (event) => {
+//     navigation.navigate('Incoming');
+//   });
+//   return unsubscribe;
+// }, [client]);
+
 /* ------------------------------------------------
  * Themed Navigation Wrapper
  * ------------------------------------------------ */
@@ -156,13 +168,15 @@ const ThemedNavigation = ({
   }, [dispatch]);
 
   return (
-    <>
-      <NavigationContainer theme={themeMode === 'dark' ? NavDarkTheme : NavLightTheme}>
-        <RootNavigator />
-        <QuickActionHandler initialQuickAction={initialQuickAction} onImageSelected={onImageSelected} />
-      </NavigationContainer>
-      <Toast />
-    </>
+    <ErrorBoundary>
+      <StreamProvider>
+        <NavigationContainer theme={themeMode === 'dark' ? NavDarkTheme : NavLightTheme}>
+          <RootNavigator />
+          <QuickActionHandler initialQuickAction={initialQuickAction} onImageSelected={onImageSelected} />
+        </NavigationContainer>
+        <Toast />
+      </StreamProvider>
+    </ErrorBoundary>
   );
 };
 
@@ -238,36 +252,38 @@ const App = () => {
   }
 
   return (
-    <Provider store={store}>
-      <ThemedNavigation
-        initialQuickAction={initialQuickAction}
-        onImageSelected={(image) => {
-          setMediaToForward(image);
-          setForwardBottomSheetVisible(true);
-        }}
-      />
+    <ErrorBoundary>
+      <Provider store={store}>
+        <ThemedNavigation
+          initialQuickAction={initialQuickAction}
+          onImageSelected={(image) => {
+            setMediaToForward(image);
+            setForwardBottomSheetVisible(true);
+          }}
+        />
 
-      {/* Forward Bottom Sheet */}
-      <FriendSelectionBottomSheet
-        visible={forwardBottomSheetVisible}
-        onClose={() => {
-          setForwardBottomSheetVisible(false);
-          setMessageToForward(null);
-          setMediaToForward([]);
-        }}
-        messageToForward={messageToForward}
-        forwarded={false}
-        mediaToForward={mediaToForward}
-        onForwardComplete={(selectedFriends) => {
-          console.log('Forwarding media/message to', selectedFriends);
-          setForwardBottomSheetVisible(false);
-          setMessageToForward(null);
-          setMediaToForward([]);
-        }}
-      />
+        {/* Forward Bottom Sheet */}
+        <FriendSelectionBottomSheet
+          visible={forwardBottomSheetVisible}
+          onClose={() => {
+            setForwardBottomSheetVisible(false);
+            setMessageToForward(null);
+            setMediaToForward([]);
+          }}
+          messageToForward={messageToForward}
+          forwarded={false}
+          mediaToForward={mediaToForward}
+          onForwardComplete={(selectedFriends) => {
+            console.log('Forwarding media/message to', selectedFriends);
+            setForwardBottomSheetVisible(false);
+            setMessageToForward(null);
+            setMediaToForward([]);
+          }}
+        />
 
-      <Toast />
-    </Provider>
+        <Toast />
+      </Provider>
+    </ErrorBoundary>
   );
 };
 
